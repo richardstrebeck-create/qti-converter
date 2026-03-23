@@ -740,72 +740,6 @@
   }
 
   /* ── CANVAS FORM ── */
-  .canvas-form {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    padding: 28px;
-  }
-
-  .canvas-form-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 20px;
-    color: var(--navy);
-    margin-bottom: 20px;
-    display: flex; align-items: center; gap: 10px;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .radio-group {
-    display: flex; gap: 20px; flex-wrap: wrap;
-    margin-top: 6px;
-  }
-
-  .radio-option {
-    display: flex; align-items: center; gap: 8px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-
-  .radio-option input { accent-color: var(--navy); }
-
-  .verify-strip {
-    background: #f8f9fa;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin: 16px 0;
-    font-size: 13px;
-    min-height: 40px;
-    display: flex; align-items: center; gap: 8px;
-  }
-
-  .verify-ok { color: var(--green); }
-  .verify-err { color: var(--red); }
-
-  /* ── PROGRESS ── */
-  .progress-wrap { margin: 16px 0; display: none; }
-  .progress-label { font-size: 13px; color: var(--text-mid); margin-bottom: 6px; }
-  .progress-bar-track {
-    height: 8px;
-    background: var(--cream-dark);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--navy), var(--gold));
-    border-radius: 4px;
-    transition: width 0.3s ease;
-    width: 0%;
-  }
-
   /* ── LOG ── */
   .log-box {
     background: var(--navy);
@@ -1006,78 +940,18 @@
 
   <!-- ── PANEL 3: EXPORT ── -->
   <div class="panel" id="panel-3">
-    <div class="panel-title">Export to Canvas</div>
-    <div class="panel-desc">Download a QTI zip file to import manually into Canvas, or send your questions directly to Canvas using your API token.</div>
+    <div class="panel-title">Download QTI File</div>
+    <div class="panel-desc">Download a QTI zip file and import it into Canvas via Settings → Import Course Content → QTI .zip file.</div>
 
-    <div class="export-grid">
-      <div class="export-card">
-        <span class="export-card-icon">📦</span>
-        <div class="export-card-title">Download QTI File</div>
-        <div class="export-card-desc">Downloads a .zip file you can import into Canvas via Settings → Import Course Content → QTI .zip file. Best if you have multiple courses to load.</div>
-        <button class="btn-primary" onclick="downloadQTI()">⬇ Download QTI Zip</button>
-      </div>
-
-      <div class="export-card">
-        <span class="export-card-icon">🔗</span>
-        <div class="export-card-title">Upload Direct to Canvas</div>
-        <div class="export-card-desc">Enter your Canvas API token and Course ID to push questions directly into Canvas as a quiz, question bank, or both. Your token is never stored.</div>
-        <button class="btn-gold" onclick="showCanvasForm()">→ Configure Canvas Upload</button>
-      </div>
+    <div class="export-card" style="max-width:560px">
+      <span class="export-card-icon">📦</span>
+      <div class="export-card-title">Download QTI Zip</div>
+      <div class="export-card-desc">Your questions will be packaged into a Canvas-compatible QTI zip file. In Canvas, go to <strong>Settings → Import Course Content → QTI .zip file</strong> and upload the file.</div>
+      <button class="btn-gold" onclick="downloadQTI()">⬇ Download QTI Zip</button>
     </div>
 
-    <!-- Canvas Form -->
-    <div class="canvas-form hidden" id="canvas-form">
-      <div class="canvas-form-title">🔗 Canvas Direct Upload</div>
-
-      <div class="info-note">
-        🔒 Your API token is used only for this session and is never stored or transmitted anywhere except directly to Canvas at wmcarey.instructure.com.
-      </div>
-
-      <div class="form-row">
-        <div>
-          <label class="field-label">Canvas API Token</label>
-          <input type="password" class="field-input" id="canvas-token" placeholder="Paste your token here">
-        </div>
-        <div>
-          <label class="field-label">Course ID</label>
-          <input type="text" class="field-input" id="canvas-course" placeholder="e.g. 12345">
-        </div>
-      </div>
-
-      <button class="btn-outline btn-sm" onclick="verifyCanvas()">✓ Verify Connection</button>
-
-      <div class="verify-strip" id="verify-strip">
-        <span style="color:#aaa">Enter token and Course ID, then click Verify.</span>
-      </div>
-
-      <div>
-        <label class="field-label">Quiz Engine</label>
-        <div class="radio-group">
-          <label class="radio-option"><input type="radio" name="engine" value="classic" checked> Classic Quizzes</label>
-          <label class="radio-option"><input type="radio" name="engine" value="new"> New Quizzes</label>
-        </div>
-      </div>
-
-      <div class="mt-12">
-        <label class="field-label">Upload As</label>
-        <div class="radio-group">
-          <label class="radio-option"><input type="radio" name="dest" value="quiz" checked> Quiz</label>
-          <label class="radio-option"><input type="radio" name="dest" value="bank"> Question Bank</label>
-          <label class="radio-option"><input type="radio" name="dest" value="both"> Both</label>
-        </div>
-      </div>
-
-      <div class="progress-wrap" id="progress-wrap">
-        <div class="progress-label" id="progress-label">Uploading…</div>
-        <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
-      </div>
-
-      <div class="actions-row">
-        <button class="btn-gold" id="upload-btn" onclick="uploadToCanvas()">⬆ Upload to Canvas</button>
-        <button class="btn-outline" onclick="checkUploadStatus()" id="check-btn" disabled>✓ Check Status</button>
-      </div>
-
-      <div class="log-box" id="canvas-log">[Ready] Configure and verify your Canvas connection above.</div>
+    <div class="info-note mt-20">
+      💡 <strong>Canvas import tip:</strong> After importing, the quiz will appear under Quizzes as a draft. Review the point totals and publish when ready.
     </div>
 
     <div class="actions-row mt-20">
@@ -1153,13 +1027,7 @@ document.getElementById('login-input').addEventListener('keydown', e => {
 let questions = [];
 let selectedFile = null;
 let editingIndex = null;
-let lastQuizId = null;
-let lastUploadedCount = 0;
-let lastToken = '';
-let lastCourse = '';
-let canvasVerified = false;
 
-const BASE_URL = "https://wmcarey.instructure.com/api/v1";
 
 // ════════════════════════════════════════════════════════
 // NAVIGATION
@@ -1217,88 +1085,158 @@ function clearFile() {
 // ════════════════════════════════════════════════════════
 // PARSER
 // ════════════════════════════════════════════════════════
-const SERIATION = /^([A-Ea-e]|[1-5])[\.\)\:\-]\s+/;
-const POINTS_RE = /points?\s*[:\-]?\s*(\d+(?:\.\d+)?)/i;
-const ANSWER_RE = /^answer\s*[:\-]?\s*([A-Ea-e1-5])/i;
-const ASTERISK  = /\s*\*\s*$/;
-const TITLE_RE  = /^title\s*[:\-]\s*(.+)/i;
-const QNUM_RE   = /^(?:question\s*)?\d+[\.\)\:\-]\s+/i;
+// Regexes — all robust to leading/trailing whitespace
+const CHOICE_LINE_RE = /^([A-Ea-e]|[1-5])[\.\)\:\-]\s+\S/;  // A. text  or  1) text
+const POINTS_RE      = /^points?\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*$/i;
+const ANSWER_RE      = /^answer\s*[:\-]?\s*([A-Ea-e1-5])\s*$/i;
+const ASTERISK_RE    = /\\\*\s*$|\*\s*$/;   // handles both  \*  and  *
+const TITLE_RE       = /^(?:quiz\s+)?title\s*[:\-]\s*(.+)/i;
+const QNUM_RE        = /^(?:question\s*)?\d+[\.\)\:\-]\s+/i;
+const CHOICE_STRIP   = /^([A-Ea-e]|[1-5])[\.\)\:\-]\s+/;
 
-function isChoiceLine(line) { return SERIATION.test(line.trim()); }
+function isChoiceLine(s) { return CHOICE_LINE_RE.test(s.trim()); }
+function isPointsLine(s) { return POINTS_RE.test(s.trim()); }
+function isAnswerLine(s) { return ANSWER_RE.test(s.trim()); }
+function isTitleLine(s)  { return TITLE_RE.test(s.trim()); }
 
-function stripSeriation(text) {
-  return text.trim().replace(SERIATION, '').trim();
+function stripChoicePrefix(text) {
+  return text.trim().replace(CHOICE_STRIP, '').trim();
 }
 
-function parseBlock(lines) {
-  if (!lines.length) return null;
-  const q = { rawBlock: lines, questionText: '', choices: [], points: null,
-               answerKey: null, errors: [], warnings: [], excluded: false };
+/*
+ * SMART PARSER STRATEGY
+ * ─────────────────────
+ * Instead of splitting on blank lines (which breaks multi-paragraph
+ * question stems), we scan ALL non-empty lines and use the presence
+ * of answer-choice lines (A. B. C. D.) as anchors to group content.
+ *
+ * Pass 1: collect all non-empty lines in order, ignoring blank lines
+ * Pass 2: find the indices of every choice-sequence start (A. or 1.)
+ *         that is followed by at least one more choice (B./2.)
+ * Pass 3: everything between the end of one question's choices+meta
+ *         and the start of the next question's choices is question text
+ */
+function parseDocText(rawText) {
+  // Strip markdown escape backslashes that pandoc adds (e.g. \* → *)
+  const text = rawText.replace(/\\\*/g, '*').replace(/\\--/g, '--');
 
-  let questionLines = [], choiceLines = [], metaLines = [], inChoices = false;
+  // Collect all non-empty lines with their original order
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  for (const line of lines) {
-    const s = line.trim();
-    if (!s) continue;
-    if (ANSWER_RE.test(s)) { metaLines.push(s); continue; }
-    if (POINTS_RE.test(s) && s.length < 40) { metaLines.push(s); continue; }
-    if (s.includes('<<IMAGE>>') || s.includes('<<FIGURE>>')) {
-      q.warnings.push('Embedded image detected. Add this image manually in Canvas after upload.');
-      continue;
+  let docTitle = null;
+
+  // Extract title if first non-empty line matches
+  if (lines.length && isTitleLine(lines[0])) {
+    docTitle = TITLE_RE.exec(lines[0])[1].trim();
+    lines.shift();
+  }
+
+  // ── Find where each question's choices block starts ──
+  // A choice block starts at line i if:
+  //   lines[i] is a choice line (A. ...)  AND
+  //   at least one of lines[i+1..i+6] is another choice line (B. ...)
+  function isChoiceBlockStart(idx) {
+    if (!isChoiceLine(lines[idx])) return false;
+    const s = lines[idx].trim();
+    // Must start with A or 1 (first choice)
+    if (!/^[Aa1][\.\)\:\-]\s/.test(s)) return false;
+    // Look ahead for a second choice (B or 2)
+    for (let j = idx+1; j < Math.min(idx+8, lines.length); j++) {
+      if (/^[Bb2][\.\)\:\-]\s/.test(lines[j].trim())) return true;
     }
-    if (!inChoices && isChoiceLine(s)) inChoices = true;
-    if (inChoices) choiceLines.push(s);
-    else questionLines.push(s);
+    return false;
   }
 
-  let rawQ = questionLines.join(' ').trim();
-  rawQ = rawQ.replace(QNUM_RE, '').trim();
-  q.questionText = rawQ;
-
-  for (const cl of choiceLines) {
-    const correct = ASTERISK.test(cl);
-    const clean = cl.replace(ASTERISK, '').trim();
-    const text = stripSeriation(clean);
-    q.choices.push({ text, correct });
+  // Find all choice-block start indices
+  const choiceStarts = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isChoiceBlockStart(i)) choiceStarts.push(i);
   }
 
-  for (const ml of metaLines) {
-    const ak = ANSWER_RE.exec(ml);
-    if (ak) q.answerKey = ak[1].toUpperCase();
-    const pts = POINTS_RE.exec(ml);
-    if (pts) q.points = parseFloat(pts[1]);
+  if (choiceStarts.length === 0) {
+    // No questions found at all
+    return { title: docTitle, questions: [] };
   }
 
-  if (q.answerKey && !q.choices.some(c => c.correct)) {
-    let idx = null;
-    if (/[A-E]/i.test(q.answerKey)) idx = q.answerKey.toUpperCase().charCodeAt(0) - 65;
-    else if (/[1-5]/.test(q.answerKey)) idx = parseInt(q.answerKey) - 1;
-    if (idx !== null && idx >= 0 && idx < q.choices.length)
-      q.choices[idx].correct = true;
+  // Pre-compute where each question's choices+meta block ends
+  const blockEnds = choiceStarts.map((cs, qi) => {
+    const nextCs = qi + 1 < choiceStarts.length ? choiceStarts[qi+1] : lines.length;
+    return getBlockEnd(cs, nextCs, lines);
+  });
+
+  const questions = [];
+
+  for (let qi = 0; qi < choiceStarts.length; qi++) {
+    const choiceStart = choiceStarts[qi];
+    const prevEnd     = qi === 0 ? 0 : blockEnds[qi-1];
+    const nextStart   = qi + 1 < choiceStarts.length ? choiceStarts[qi+1] : lines.length;
+
+    // Question text = lines between end of previous question and start of this one's choices
+    const qTextLines = lines.slice(prevEnd, choiceStart)
+      .filter(l => !isPointsLine(l) && !isAnswerLine(l) && !isTitleLine(l));
+
+    // Collect choices and meta
+    const choiceLines = [];
+    const metaLines   = [];
+    for (let i = choiceStart; i < nextStart; i++) {
+      const s = lines[i].trim();
+      if (isChoiceLine(s))                        choiceLines.push(s);
+      else if (isPointsLine(s) || isAnswerLine(s)) metaLines.push(s);
+    }
+
+    // Build question object
+    let qText = qTextLines.join(' ').trim();
+    qText = qText.replace(QNUM_RE, '').trim();
+
+    const q = {
+      questionText: qText,
+      choices: [],
+      points: null,
+      answerKey: null,
+      errors: [],
+      warnings: [],
+      excluded: false
+    };
+
+    // Parse choices
+    for (const cl of choiceLines) {
+      const correct = ASTERISK_RE.test(cl);
+      const clean   = cl.replace(ASTERISK_RE, '').trim();
+      const text    = stripChoicePrefix(clean);
+      q.choices.push({ text, correct });
+    }
+
+    // Parse meta
+    for (const ml of metaLines) {
+      const ak  = ANSWER_RE.exec(ml);
+      if (ak) q.answerKey = ak[1].toUpperCase();
+      const pts = POINTS_RE.exec(ml);
+      if (pts) q.points = parseFloat(pts[1]);
+    }
+
+    // Apply answer key if no asterisk found
+    if (q.answerKey && !q.choices.some(c => c.correct)) {
+      let idx = null;
+      if (/[A-E]/i.test(q.answerKey)) idx = q.answerKey.toUpperCase().charCodeAt(0) - 65;
+      else if (/[1-5]/.test(q.answerKey))  idx = parseInt(q.answerKey) - 1;
+      if (idx !== null && idx >= 0 && idx < q.choices.length)
+        q.choices[idx].correct = true;
+    }
+
+    questions.push(q);
   }
 
-  return q;
+  return { title: docTitle, questions };
 }
 
-function parseDocText(text) {
-  const lines = text.split('\n');
-  let blocks = [], current = [];
-  for (const line of lines) {
-    if (line.trim() === '') {
-      if (current.length) { blocks.push(current); current = []; }
-    } else { current.push(line); }
+// Returns the index just after all choices+meta for question whose choices start at cs
+function getBlockEnd(cs, nextCs, lines) {
+  let end = cs;
+  for (let i = cs; i < nextCs; i++) {
+    const s = lines[i].trim();
+    if (isChoiceLine(s) || isPointsLine(s) || isAnswerLine(s)) end = i + 1;
   }
-  if (current.length) blocks.push(current);
-
-  let title = null, qs = [];
-  for (const block of blocks) {
-    if (block.length === 1 && TITLE_RE.test(block[0])) {
-      title = TITLE_RE.exec(block[0])[1].trim(); continue;
-    }
-    const q = parseBlock(block);
-    if (q) qs.push(q);
-  }
-  return { title, questions: qs };
+  return end;
 }
 
 function validateQuestions(qs) {
@@ -1621,215 +1559,13 @@ async function downloadQTI() {
   showToast('✓ QTI zip downloaded. Import via Canvas → Settings → Import Course Content.');
 }
 
-// ════════════════════════════════════════════════════════
-// CANVAS API
-// ════════════════════════════════════════════════════════
-function showCanvasForm() {
-  document.getElementById('canvas-form').classList.remove('hidden');
-  document.getElementById('canvas-form').scrollIntoView({ behavior:'smooth' });
-}
 
-function canvasHeaders(token) {
-  return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' };
-}
-
-function toFormBody(obj) {
-  return Object.entries(obj).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
-}
-
-async function verifyCanvas() {
-  const token = document.getElementById('canvas-token').value.trim();
-  const cid   = document.getElementById('canvas-course').value.trim();
-  const strip = document.getElementById('verify-strip');
-
-  if (!token || !cid) { strip.innerHTML = '<span class="verify-err">⚠ Please enter both fields.</span>'; return; }
-  strip.innerHTML = '<span style="color:#aaa">⏳ Verifying…</span>';
-
-  try {
-    const r = await fetch(`${BASE_URL}/courses/${cid}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    if (r.status === 200) {
-      const data = await r.json();
-      strip.innerHTML = `<span class="verify-ok">✓ Connected: ${escapeHtml(data.name || 'Course found')}</span>`;
-      canvasVerified = true;
-      lastToken = token; lastCourse = cid;
-    } else if (r.status === 401) {
-      strip.innerHTML = '<span class="verify-err">❌ Invalid API token.</span>';
-      canvasVerified = false;
-    } else if (r.status === 404) {
-      strip.innerHTML = `<span class="verify-err">❌ Course ID ${cid} not found.</span>`;
-      canvasVerified = false;
-    } else {
-      strip.innerHTML = `<span class="verify-err">❌ Canvas returned status ${r.status}.</span>`;
-      canvasVerified = false;
-    }
-  } catch(e) {
-    strip.innerHTML = `<span class="verify-err">❌ Connection error: ${e.message}</span>`;
-    canvasVerified = false;
-  }
-}
-
-async function uploadToCanvas() {
-  if (!canvasVerified) { showToast('⚠ Please verify your Canvas connection first.'); return; }
-  const active = questions.filter(q => !q.excluded);
-  if (!active.length) { showToast('⚠ No questions to upload.'); return; }
-
-  const title  = document.getElementById('quiz-title').value.trim() || 'Untitled Quiz';
-  const dest   = document.querySelector('input[name="dest"]:checked').value;
-  const token  = lastToken;
-  const cid    = lastCourse;
-
-  document.getElementById('upload-btn').disabled = true;
-  document.getElementById('check-btn').disabled  = true;
-  document.getElementById('progress-wrap').style.display = 'block';
-
-  const results = [];
-  lastQuizId = null; lastUploadedCount = 0;
-
-  try {
-    if (dest === 'quiz' || dest === 'both') {
-      canvasLog('Creating quiz in Canvas…');
-      setProgress(0, active.length, 'Creating quiz…');
-
-      const qr = await fetch(`${BASE_URL}/courses/${cid}/quizzes`, {
-        method: 'POST',
-        headers: canvasHeaders(token),
-        body: toFormBody({ 'quiz[title]': title, 'quiz[quiz_type]': 'assignment', 'quiz[published]': 'false' })
-      });
-
-      if (!qr.ok) { canvasLog(`❌ Failed to create quiz: ${qr.status}`); throw new Error('Quiz creation failed'); }
-      const qdata = await qr.json();
-      const quizId = qdata.id;
-      lastQuizId = quizId;
-
-      let failed = 0;
-      for (let i = 0; i < active.length; i++) {
-        const q = active[i];
-        setProgress(i+1, active.length, `Uploading question ${i+1} of ${active.length}…`);
-        const ok = await uploadQuestionToQuiz(token, cid, quizId, q, i+1);
-        if (!ok) failed++;
-      }
-      const sent = active.length - failed;
-      lastUploadedCount = sent;
-      results.push(`✓ Quiz created — ${sent} of ${active.length} questions uploaded.${failed ? ` (${failed} failed)` : ''}`);
-      canvasLog(results[results.length-1]);
-    }
-
-    if (dest === 'bank' || dest === 'both') {
-      canvasLog('Creating question bank in Canvas…');
-      setProgress(0, active.length, 'Creating question bank…');
-
-      const br = await fetch(`${BASE_URL}/courses/${cid}/question_banks`, {
-        method: 'POST',
-        headers: canvasHeaders(token),
-        body: toFormBody({ 'question_bank[title]': title })
-      });
-
-      if (!br.ok) { canvasLog(`❌ Failed to create question bank: ${br.status}`); throw new Error('Bank creation failed'); }
-      const bdata = await br.json();
-      const bankId = bdata.id;
-
-      let failed = 0;
-      for (let i = 0; i < active.length; i++) {
-        const q = active[i];
-        setProgress(i+1, active.length, `Uploading question ${i+1} of ${active.length} to bank…`);
-        const ok = await uploadQuestionToBank(token, cid, bankId, q, i+1);
-        if (!ok) failed++;
-      }
-      const sent = active.length - failed;
-      results.push(`✓ Question bank created — ${sent} of ${active.length} questions uploaded.${failed ? ` (${failed} failed)` : ''}`);
-      canvasLog(results[results.length-1]);
-    }
-
-    setProgress(active.length, active.length, 'Upload complete.');
-    canvasLog('⚠ Note: Canvas may show incomplete point totals until the quiz is published.');
-    showToast('✓ Upload complete!');
-    document.getElementById('check-btn').disabled = false;
-
-  } catch(e) {
-    canvasLog('❌ Upload error: ' + e.message);
-    showToast('❌ Upload failed. See log for details.');
-  }
-
-  document.getElementById('upload-btn').disabled = false;
-}
-
-async function uploadQuestionToQuiz(token, cid, quizId, q, pos) {
-  const body = {
-    'question[question_name]':   `Question ${pos}`,
-    'question[question_text]':   q.questionText,
-    'question[question_type]':   'multiple_choice_question',
-    'question[points_possible]': String(q.points !== null ? q.points : 1.0),
-    'question[position]':        String(pos),
-  };
-  q.choices.forEach((c, i) => {
-    body[`question[answers][${i}][answer_text]`]   = c.text;
-    body[`question[answers][${i}][answer_weight]`] = c.correct ? '100' : '0';
-    body[`question[answers][${i}][answer_comments]`] = '';
-  });
-  const r = await fetch(`${BASE_URL}/courses/${cid}/quizzes/${quizId}/questions`, {
-    method:'POST', headers: canvasHeaders(token), body: toFormBody(body)
-  });
-  return r.ok;
-}
-
-async function uploadQuestionToBank(token, cid, bankId, q, pos) {
-  const body = {
-    'question[question_name]':   `Question ${pos}`,
-    'question[question_text]':   q.questionText,
-    'question[question_type]':   'multiple_choice_question',
-    'question[points_possible]': String(q.points !== null ? q.points : 1.0),
-  };
-  q.choices.forEach((c, i) => {
-    body[`question[answers][${i}][answer_text]`]   = c.text;
-    body[`question[answers][${i}][answer_weight]`] = c.correct ? '100' : '0';
-    body[`question[answers][${i}][answer_comments]`] = '';
-  });
-  const r = await fetch(`${BASE_URL}/courses/${cid}/question_banks/${bankId}/questions`, {
-    method:'POST', headers: canvasHeaders(token), body: toFormBody(body)
-  });
-  return r.ok;
-}
-
-async function checkUploadStatus() {
-  if (!lastQuizId) {
-    canvasLog('ℹ Status check is only available for quiz uploads, not question banks.');
-    return;
-  }
-  canvasLog('Checking quiz status in Canvas…');
-  try {
-    const r = await fetch(`${BASE_URL}/courses/${lastCourse}/quizzes/${lastQuizId}/questions?per_page=100`, {
-      headers: { 'Authorization': `Bearer ${lastToken}` }
-    });
-    if (!r.ok) { canvasLog('❌ Quiz not found in Canvas. It may have been deleted.'); return; }
-    const data = await r.json();
-    const count = data.length;
-    if (lastUploadedCount > 0 && count !== lastUploadedCount)
-      canvasLog(`❌ Mismatch: ${lastUploadedCount} uploaded but Canvas confirms ${count}. Consider re-uploading.`);
-    else
-      canvasLog(`✓ Canvas confirms ${count} question(s) in the quiz. Point totals display fully after publishing.`);
-  } catch(e) {
-    canvasLog('❌ Status check error: ' + e.message);
-  }
-}
 
 // ════════════════════════════════════════════════════════
 // UI HELPERS
 // ════════════════════════════════════════════════════════
-function setProgress(val, total, label) {
-  const pct = total ? Math.round((val/total)*100) : 0;
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-label').textContent = label;
-}
-
 function uploadLog(msg) {
   const box = document.getElementById('upload-log');
-  const ts  = new Date().toLocaleTimeString('en-US',{hour12:false});
-  box.textContent += `\n[${ts}] ${msg}`;
-  box.scrollTop = box.scrollHeight;
-}
-
-function canvasLog(msg) {
-  const box = document.getElementById('canvas-log');
   const ts  = new Date().toLocaleTimeString('en-US',{hour12:false});
   box.textContent += `\n[${ts}] ${msg}`;
   box.scrollTop = box.scrollHeight;
@@ -1854,18 +1590,13 @@ function resetAll() {
   if (questions.length && !confirm('Reset everything and start over?')) return;
   questions = [];
   selectedFile = null;
-  canvasVerified = false;
-  lastQuizId = null;
+
   document.getElementById('file-input').value = '';
   document.getElementById('file-info').style.display = 'none';
   document.getElementById('quiz-title').value = '';
   document.getElementById('parse-btn').disabled = true;
   document.getElementById('upload-log').textContent = '[Ready] Upload a .docx file to begin.';
-  document.getElementById('canvas-log').textContent = '[Ready] Configure and verify your Canvas connection above.';
-  document.getElementById('canvas-form').classList.add('hidden');
-  document.getElementById('verify-strip').innerHTML = '<span style="color:#aaa">Enter token and Course ID, then click Verify.</span>';
-  document.getElementById('progress-wrap').style.display = 'none';
-  document.getElementById('progress-fill').style.width = '0%';
+
   renderTable();
   showPanel(1);
 }
