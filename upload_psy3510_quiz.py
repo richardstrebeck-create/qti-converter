@@ -23,7 +23,7 @@ import urllib.error
 
 CANVAS_BASE_URL = "https://wmcarey.instructure.com"
 COURSE_ID = 78684
-QUIZ_TITLE = "PSY 3510 Midterm Quiz"
+QUIZ_TITLE = "351 MT update"
 
 # Default location of the API token (one token string in a plain text file).
 TOKEN_PATH = r"C:\Users\rstrebeck\OneDrive - WCU\Claude\Canvas_token.txt"
