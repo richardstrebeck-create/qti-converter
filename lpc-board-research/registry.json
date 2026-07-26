@@ -1,0 +1,757 @@
+{
+  "_meta": {
+    "purpose": "Registry of state counseling-board disciplinary-action publication points, for feasibility assessment of automated collection of public board orders.",
+    "compiled": "2026-07-26",
+    "compiled_by": "Claude Code research pass",
+    "IMPORTANT_verification_status": "URLs and publication models below were derived from web search results ONLY. No page in this registry was fetched or parsed, because the sandbox this was compiled in blocks outbound HTTPS to state government hosts (see FEASIBILITY.md, section 6). Treat every entry as a lead requiring local confirmation via probe.py, not as verified ground truth. Confidence field reflects how directly the URL appeared in search results.",
+    "models": {
+      "A": "Dedicated board discipline index. Board publishes an enumerable list of disciplinary actions, typically with a linked per-case order/consent-agreement document containing the underlying conduct narrative. Best case for research.",
+      "B": "Umbrella-agency periodic disciplinary report. A department (health, licensing, consumer affairs) publishes recurring monthly/quarterly reports covering ALL regulated professions. Enumerable and often archived, but usually carries a one-line sanction summary rather than full order text, and requires filtering to counselor license types.",
+      "C": "Structured enforcement-actions endpoint. A query-driven portal/search that returns disciplinary actions filtered by board, profession code, or date. Enumerable via URL parameters.",
+      "D": "License-lookup only. Discipline is disclosed on an individual licensee's record, reachable only if you already know the name or license number. NOT enumerable without an independent roster of all licensees. This is the primary feasibility wall.",
+      "E": "Minutes, newsletters, or nothing published. Disciplinary detail appears only in board meeting minutes/newsletters, or not online at all; a public-records request is the practical route."
+    },
+    "field_notes": {
+      "enumerable": "Can you obtain a complete list of disciplinary actions WITHOUT already knowing licensee names? This is the single most important field. false => the state cannot be added to the dataset by scraping alone.",
+      "order_text": "full = linked order document with conduct findings (WHEREAS clauses); summary = name/sanction/short reason only; none = no document or narrative published online.",
+      "left_censor": "Earliest date the online record reaches, where a limit is documented. Records-retention limits create left-censoring that biases longitudinal analysis."
+    }
+  },
+
+  "jurisdictions": [
+    {
+      "state": "Alabama",
+      "board": "Alabama Board of Examiners in Counseling",
+      "credentials": ["LPC", "ALC"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [],
+      "confidence": "n/a",
+      "status": "ALREADY IN DATASET - not re-researched in this pass",
+      "notes": "Present in the existing scraper export. Left in registry for completeness."
+    },
+    {
+      "state": "Alaska",
+      "board": "Board of Professional Counselors (Div. of Corporations, Business & Professional Licensing)",
+      "credentials": ["LPC"],
+      "primary_model": "B",
+      "secondary_models": ["D"],
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://www.commerce.alaska.gov/web/cbpl/DisciplinaryActionReports.aspx",
+        "https://www.commerce.alaska.gov/web/CBPL/ProfessionalLicensing/professionalcounselors.aspx",
+        "https://www.commerce.alaska.gov/cbp/main/search/professional"
+      ],
+      "confidence": "high",
+      "left_censor": "2017",
+      "notes": "Division-wide disciplinary action reports covering ALL licensed professions, added quarterly. Posting lag documented as up to 60 days. Pre-2017 actions require a public records request."
+    },
+    {
+      "state": "Arizona",
+      "board": "Arizona Board of Behavioral Health Examiners",
+      "credentials": ["LPC", "LAC", "LMSW", "LCSW", "LMFT", "LISAC"],
+      "primary_model": "D",
+      "secondary_models": ["E"],
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://bbhe.az.gov/"
+      ],
+      "confidence": "medium",
+      "notes": "Composite board. Consent agreements are acted on in public board meetings and appear in posted agendas/minutes PDFs, but no dedicated enumerable disciplinary index surfaced. Discipline otherwise via license lookup. Agenda mining is a possible fallback but agendas name cases without conduct detail."
+    },
+    {
+      "state": "Arkansas",
+      "board": "Arkansas Board of Examiners in Counseling and Marriage & Family Therapy",
+      "credentials": ["LPC", "LAC", "LMFT"],
+      "primary_model": "D",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://portal.arkansas.gov/service/ar-counselor-mariage-fam-therapist-lic-search/",
+        "https://healthy.arkansas.gov/boards-commissions/boards/examiners-in-counseling-arkansas-state-board/"
+      ],
+      "confidence": "medium",
+      "notes": "Licensee search reportedly surfaces disciplinary actions/sanctions per record. Board pages reference 'disciplinary procedures' but no enumerable action list found."
+    },
+    {
+      "state": "California",
+      "board": "Board of Behavioral Sciences (BBS)",
+      "credentials": ["LPCC", "LMFT", "LCSW", "LEP"],
+      "primary_model": "D",
+      "secondary_models": ["B"],
+      "enumerable": false,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://www.bbs.ca.gov/consumers/enforcement_actions.html",
+        "https://www.bbs.ca.gov/consumers/"
+      ],
+      "confidence": "high",
+      "notes": "BBS has an enforcement-actions page, but the actual disciplinary DOCUMENTS are attached to individual records in the DCA license search - i.e. discovery requires a name. Worth a local probe: if the enforcement_actions page itself enumerates recent actions, California upgrades to model B/C and becomes high-value given LPCC volume."
+    },
+    {
+      "state": "Colorado",
+      "board": "State Board of Licensed Professional Counselor Examiners (DORA / DPO)",
+      "credentials": ["LPC", "LPCC"],
+      "primary_model": "D",
+      "enumerable": false,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://dpo.colorado.gov/ProfessionalCounselor/Enforcement",
+        "https://apps.colorado.gov/dora/licensing/Lookup/LicenseLookup.aspx",
+        "https://apps2.colorado.gov/dora/licensing/lookup/generateroster.aspx"
+      ],
+      "confidence": "high",
+      "notes": "SPECIAL CASE - the roster generator can export the full licensee list, which makes Colorado enumerable in two hops: generate roster, then walk each licensee's record for public actions. Disciplinary documents are posted within days of issuance and full order text is available. Highest-effort/highest-yield candidate in model D. Rate-limiting discipline is essential if attempted."
+    },
+    {
+      "state": "Connecticut",
+      "board": "Dept. of Public Health, Practitioner Licensing & Investigations (PLIS)",
+      "credentials": ["LPC", "LPCA"],
+      "primary_model": "B",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://portal.ct.gov/DPH/Practitioner-Licensing--Investigations/PLIS/Health-Care-Practitioner-Licensing-and-Investigations"
+      ],
+      "confidence": "low",
+      "notes": "A quarterly 'Regulatory Action Report' compiles disciplinary actions across all DPH-licensed individuals and organizations. Exact URL for the report archive was not isolated - needs a local probe of the PLIS pages. CT State Library also archives DPH agency decisions, a possible alternate source for full order text."
+    },
+    {
+      "state": "Delaware",
+      "board": "Board of Mental Health and Chemical Dependency Professionals (Div. of Professional Regulation)",
+      "credentials": ["LPCMH", "LACMH", "LCDP"],
+      "primary_model": "D",
+      "enumerable": false,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://dpr.delaware.gov/"
+      ],
+      "confidence": "low",
+      "notes": "Disciplinary documentation stated to be viewable through the Division of Professional Regulation's online license verification - i.e. per-licensee. Individual suspensions occasionally announced via news.delaware.gov press releases, which is a weak secondary enumeration path."
+    },
+    {
+      "state": "District of Columbia",
+      "board": "DC Board of Professional Counseling (DC Health / HRLA)",
+      "credentials": ["LPC", "LGPC"],
+      "primary_model": "D",
+      "enumerable": false,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://dohenterprise.my.site.com/ver/s/",
+        "https://dchealth.dc.gov/service/professional-counseling-licensing"
+      ],
+      "confidence": "medium",
+      "notes": "Final orders obtainable by searching the licensee's name in the HRLA verification portal. Portal is a Salesforce Experience Cloud site - JS-rendered, likely requires a headless browser rather than plain HTTP. DC Health publishes an enumerable disciplinary page for Medicine but no counselor equivalent was found."
+    },
+    {
+      "state": "Florida",
+      "board": "Board of Clinical Social Work, Marriage & Family Therapy and Mental Health Counseling (Ch. 491)",
+      "credentials": ["LMHC", "LMFT", "LCSW"],
+      "primary_model": "C",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://mqa-internet.doh.state.fl.us/MQASearchServices/EnforcementActionsPractitioner/ShowLast30DaysOthr",
+        "https://mqa-internet.doh.state.fl.us/MQASearchServices/EnforcementActionsPractitioner/ShowLast30DaysErso",
+        "https://mqa-internet.doh.state.fl.us/MQASearchServices/Document",
+        "https://mqa-internet.doh.state.fl.us/mqasearchservices/home"
+      ],
+      "confidence": "high",
+      "notes": "TIER 1 TARGET. MQA search portal exposes dedicated enforcement-action routes: final orders and emergency suspension/restriction orders. The observed routes are rolling-30-day views, so backfill likely needs either a date-parameterised variant or repeated harvesting; the /Document index is the place to look for archived orders. Florida is a large, high-volume state with genuinely public final orders - best single addition to the dataset."
+    },
+    {
+      "state": "Georgia",
+      "board": "Georgia Composite Board of Professional Counselors, Social Workers and Marriage & Family Therapists (Sec. of State)",
+      "credentials": ["LPC", "APC", "LCSW", "LMFT"],
+      "primary_model": "E",
+      "secondary_models": ["D"],
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://sos.ga.gov/board-professional-counselors-social-workers-and-marriage-family-therapists"
+      ],
+      "confidence": "medium",
+      "notes": "Two searches found no enumerable per-case disciplinary list. Board publishes a list of Cease and Desist Orders (mostly unlicensed practice, not licensee discipline). Consent orders exist but do not appear to be indexed publicly. Likely a records-request state."
+    },
+    {
+      "state": "Hawaii",
+      "board": "Mental Health Counselor Licensing Program (DCCA / PVL); RICO enforcement",
+      "credentials": ["LMHC"],
+      "primary_model": "B",
+      "secondary_models": ["A"],
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://cca.hawaii.gov/oah/oah_decisions/",
+        "https://cca.hawaii.gov/pvl/programs/mental/",
+        "https://businesscheck.hawaii.gov/"
+      ],
+      "confidence": "high",
+      "notes": "DCCA issues recurring 'DCCA Disciplinary Actions (through <MONTH YEAR>)' summary releases covering all professional/vocational licenses, and full decisions are posted at the OAH decisions archive. Good combination: enumerable summaries plus retrievable full text. Small state, low case volume."
+    },
+    {
+      "state": "Idaho",
+      "board": "Board of Professional Counselors and Marriage and Family Therapists (DOPL)",
+      "credentials": ["LPC", "LCPC", "LMFT"],
+      "primary_model": "E",
+      "secondary_models": ["D"],
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://dopl.idaho.gov/cou/",
+        "https://dopl.idaho.gov/investigation-and-disciplinary-process/"
+      ],
+      "confidence": "medium",
+      "probe_hint": "https://dopl.idaho.gov/cou/cou-disciplinary-actions/ - INFERRED, NOT CONFIRMED. DOPL publishes per-board discipline pages under this pattern for other boards (e.g. /sre/sre-disciplinary-actions/). Probe this before writing Idaho off.",
+      "notes": "Board minutes PDFs are published. A counselor-board equivalent of the confirmed real-estate discipline page may well exist - the inferred URL above is the single highest-value guess in this registry."
+    },
+    {
+      "state": "Illinois",
+      "board": "Professional Counselor Licensing and Disciplinary Board (IDFPR)",
+      "credentials": ["LPC", "LCPC"],
+      "primary_model": "B",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://idfpr.illinois.gov/news/disciplines/discreports.html",
+        "https://idfpr.illinois.gov/news/disciplines/discreportsdefault.html",
+        "https://idfpr.illinois.gov/profs/boards/profcounselor.html"
+      ],
+      "confidence": "high",
+      "notes": "TIER 1 TARGET. Monthly consolidated disciplinary reports listing every licensee disciplined that month: name, city, discipline imposed, brief reason. Covers all IDFPR professions so requires filtering to LPC/LCPC. Archive of monthly reports makes long backfill straightforward. Caveat: 'brief description' means conduct narrative is thin - expect a higher share of records that the pipeline would code as low-detail."
+    },
+    {
+      "state": "Indiana",
+      "board": "Behavioral Health and Human Services Licensing Board (PLA)",
+      "credentials": ["LMHC", "LCSW", "LMFT", "LCAC"],
+      "primary_model": "E",
+      "secondary_models": ["D"],
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://www.in.gov/pla/professions/behavioral-health-and-human-services/behavioral-health-and-human-services-licensing-board-board/"
+      ],
+      "confidence": "medium",
+      "notes": "PLA references a 'Disciplinary Actions / License Litigation' area; board meeting minutes PDFs are published on a predictable in.gov/pla/files/ path and do record case dispositions. Minutes mining is viable but yields dispositions without full conduct findings."
+    },
+    {
+      "state": "Iowa",
+      "board": "Board of Behavioral Science / Board of Behavioral Health Professionals (DIAL)",
+      "credentials": ["LMHC", "LMFT", "tLMHC"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://dial.iowa.gov/i-need/board-actions",
+        "https://documents.iowa.gov/"
+      ],
+      "confidence": "high",
+      "notes": "Board actions are published with electronic copies of orders archived via documents.iowa.gov. Recent actions are individually identifiable by licensee and date. Note the board was renamed (Behavioral Science -> Behavioral Health Professionals), so historical archives may sit under both names."
+    },
+    {
+      "state": "Kansas",
+      "board": "Behavioral Sciences Regulatory Board (BSRB)",
+      "credentials": ["LPC", "LCPC", "LMSW", "LSCSW", "LMFT", "LCMFT"],
+      "primary_model": "E",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://ksbsrb.ks.gov/"
+      ],
+      "confidence": "low",
+      "notes": "Statute directs the board to publish names of violators, and board minutes are archived (via a ContentDM digital collection), but no enumerable disciplinary index surfaced. Needs a direct local probe of ksbsrb.ks.gov."
+    },
+    {
+      "state": "Kentucky",
+      "board": "Kentucky Board of Licensed Professional Counselors",
+      "credentials": ["LPCC", "LPCA"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://lpc.ky.gov/"
+      ],
+      "confidence": "medium",
+      "left_censor": "possibly 5 years - see notes",
+      "notes": "IMPORTANT METHODOLOGICAL FLAG. Board minutes record an active discussion of imposing a retention limit on how long disciplinary actions stay on the website, with DPL general counsel recommending 5 years - explicitly contrasted against Louisiana and Missouri, which report indefinitely. If adopted, Kentucky's online record is truncated at 5 years, which would left-censor even a 10-year analysis window. Confirm current retention before including Kentucky in trend analysis."
+    },
+    {
+      "state": "Louisiana",
+      "board": "Louisiana Licensed Professional Counselors Board of Examiners",
+      "credentials": ["LPC", "PLPC", "LMFT", "PLMFT"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://www.lpcboard.org/disciplinary-action"
+      ],
+      "document_url_pattern": "https://www.lpcboard.org/assets/Disciplinary_Actions/<case-number>.pdf  (observed: 14.15-67.pdf, 22_23-183-Consent-Agreement.pdf)",
+      "confidence": "high",
+      "notes": "TIER 1 TARGET. Clean dedicated index of all disciplined licenses with linked Final Consent Agreements and Orders. Case-number filenames encode fiscal year, which helps date normalisation. Reports indefinitely (per the Kentucky board discussion), so full historical depth is available. Structurally the closest analogue to the states already in the dataset."
+    },
+    {
+      "state": "Maine",
+      "board": "Board of Counseling Professionals Licensure (OPOR)",
+      "credentials": ["LCPC", "LPC", "LMFT"],
+      "primary_model": "E",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://www.maine.gov/pfr/professionallicensing/professions/board-of-counseling-professionals-licensure"
+      ],
+      "confidence": "low",
+      "notes": "Board resolves most matters by consent agreement. No enumerable public list of consent agreements surfaced. OPOR sometimes posts aggregate enforcement data; individual agreements likely require a records request."
+    },
+    {
+      "state": "Maryland",
+      "board": "Maryland Board of Professional Counselors and Therapists",
+      "credentials": ["LCPC", "LGPC", "LCMFT", "LCADC", "LBA"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://health.maryland.gov/bopc/pages/publicorders.aspx",
+        "https://health.maryland.gov/bopc/Pages/G.aspx"
+      ],
+      "document_url_pattern": "https://health.maryland.gov/bopc/pdfs/<Name>%20Final%20Order*.pdf  (observed: JDouglas Final Order - Amended-.pdf)",
+      "confidence": "high",
+      "notes": "TIER 1 TARGET. 'Board Orders / Formal Disciplinary Actions' page organises public orders BY CREDENTIAL TYPE, which means counselor cases can be isolated cleanly without post-hoc license filtering - unusually convenient for this project. Full order PDFs with findings. Note informal actions (letters of education/advisory letters) are confidential and never appear, so Maryland's published set is skewed toward more serious matters."
+    },
+    {
+      "state": "Massachusetts",
+      "board": "Board of Registration of Allied Mental Health and Human Services Professions",
+      "credentials": ["LMHC", "LMFT", "LRC", "LEP", "LABA"],
+      "primary_model": "E",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://www.mass.gov/orgs/board-of-registration-of-allied-mental-health-and-human-services-professions"
+      ],
+      "confidence": "low",
+      "notes": "No enumerable disciplinary list surfaced. Mass.gov hosts per-board 'disciplinary actions' pages for some health boards; probe whether an Allied Mental Health equivalent exists. Otherwise a records-request state."
+    },
+    {
+      "state": "Michigan",
+      "board": "Michigan Board of Counseling (LARA / BPL)",
+      "credentials": ["LPC", "LLPC"],
+      "primary_model": "B",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://www.michigan.gov/lara/bureau-list/bpl/health/dar-reports-health/health-license-disciplinary-action-reports",
+        "https://www.michigan.gov/lara/i-need-to/look-up-a-disciplinary-action-report"
+      ],
+      "confidence": "high",
+      "notes": "Monthly Disciplinary Action Reports (DARs) across all health boards, containing licensee name, license number, action type, effective date, and GENERAL NATURE of the complaint - plus appeal status updates, which is unusually useful. Critical limitation: the actual order DOCUMENTS require a FOIA request, so Michigan yields structured sanction data but not conduct narrative. Good for sanction-severity analysis, weak for violation-category coding."
+    },
+    {
+      "state": "Minnesota",
+      "board": "Minnesota Board of Behavioral Health and Therapy (BBHT)",
+      "credentials": ["LPC", "LPCC", "LADC", "LMFT-adjacent"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://mn.gov/boards/behavioral-health/public-information/complaints-discipline.jsp",
+        "https://mn.gov/boards/behavioral-health/public-information/index.jsp"
+      ],
+      "document_url_pattern": "https://mn.gov/boards/assets/<Last>,%20<First>%20<M-D-YY>_tcm21-<id>.pdf  (observed: Aschenbrener, Mary 10-24-25_tcm21-715212.pdf; Elwell, William 8-14-25_tcm21-702223.pdf)",
+      "confidence": "high",
+      "notes": "TIER 1 TARGET. Enumerable list of all public disciplinary orders with per-case PDFs. Filenames embed licensee name AND order date, so date normalisation is nearly free. There is also an aggregate 'Public disc actions BBHT <date>' PDF summarising action types. Caveat: the board states it is STILL UPLOADING its full historical collection, so the online set is incomplete for older years - a real left-censoring risk that should be checked rather than assumed."
+    },
+    {
+      "state": "Mississippi",
+      "board": "Mississippi State Board of Examiners for Licensed Professional Counselors",
+      "credentials": ["LPC"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [],
+      "confidence": "n/a",
+      "status": "ALREADY IN DATASET - not re-researched in this pass"
+    },
+    {
+      "state": "Missouri",
+      "board": "Missouri Committee for Professional Counselors (Div. of Professional Registration)",
+      "credentials": ["LPC", "PLPC"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://pr.mo.gov/counselors-discipline.asp"
+      ],
+      "confidence": "high",
+      "notes": "TIER 1 TARGET. Dedicated counselor-specific discipline page on a stable, simple .asp path - no composite-board filtering needed. Reports disciplinary action INDEFINITELY (per the Kentucky board's comparative discussion), giving maximum historical depth. Together with Louisiana, the best-behaved source in this registry."
+    },
+    {
+      "state": "Montana",
+      "board": "Board of Behavioral Health (Dept. of Labor & Industry)",
+      "credentials": ["LCPC", "LCSW", "LMFT", "LAC"],
+      "primary_model": "D",
+      "enumerable": false,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://ebizws.mt.gov/PUBLICPORTAL/disclaimer.jsp"
+      ],
+      "confidence": "medium",
+      "left_censor": "1996-07-01",
+      "notes": "Statute requires final sanction orders to be published and noted on the licensee lookup - but publication is ON the lookup record, so discovery still requires a name. Posting delayed by appeals/administrative processing. Pre-July-1996 records not in the system."
+    },
+    {
+      "state": "Nebraska",
+      "board": "Board of Mental Health Practice (DHHS Licensure Unit)",
+      "credentials": ["LIMHP", "LMHP", "LPC", "CPC"],
+      "primary_model": "B",
+      "secondary_models": ["D"],
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://dhhs.ne.gov/licensure/Documents/08-23discip.pdf",
+        "https://www.nebraska.gov/LISSearch/search.cgi"
+      ],
+      "document_url_pattern": "https://dhhs.ne.gov/licensure/Documents/<MM-YY>discip.pdf  (observed: 08-23discip.pdf) - PATTERN INFERRED FROM ONE EXAMPLE; enumerate month-by-month with probe.py before relying on it",
+      "confidence": "high",
+      "notes": "STRONG CANDIDATE. Periodic 'Disciplinary Actions Against Professional Licenses' PDFs on an apparently date-templated filename, which would allow direct enumeration by iterating months rather than crawling an index. Observed record granularity is good: licensee, all held license types, revocation date, and named grounds (e.g. 'Dishonorable Conduct, Misdemeanor Conviction(s), Unprofessional Conduct'). Full order documents sit in the licensee's record on the state lookup."
+    },
+    {
+      "state": "Nevada",
+      "board": "Board of Examiners for Marriage and Family Therapists and Clinical Professional Counselors",
+      "credentials": ["CPC", "CPC-I", "LMFT"],
+      "primary_model": "D",
+      "secondary_models": ["A"],
+      "enumerable": false,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://marriage.nv.gov/services/",
+        "https://marriage.nv.gov/Services/zzzdelete_-Disciplinary_Actions"
+      ],
+      "confidence": "low",
+      "notes": "Orders imposing discipline are statutorily public records. A disciplinary-actions page exists but the URL surfaced in search carries a 'zzzdelete_' prefix, indicating a deprecated/renamed page - the live path needs to be rediscovered by probing marriage.nv.gov/services/. Very low case volume (13 complaints, 1 settlement, 1 hearing in 2019), so Nevada adds little statistical weight regardless."
+    },
+    {
+      "state": "New Hampshire",
+      "board": "Board of Mental Health Practice (Office of Professional Licensure and Certification)",
+      "credentials": ["LCMHC", "LMFT", "LICSW", "LADC"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://www.oplc.nh.gov/board-mental-health-practice-actions",
+        "https://www.oplc.nh.gov/board-mental-health-practice-actions-2024",
+        "https://www.oplc.nh.gov/board-mental-health-practice-actions-2023",
+        "https://www.oplc.nh.gov/board-mental-health-practice-actions-2021"
+      ],
+      "document_url_pattern": "https://www.oplc.nh.gov/sites/g/files/ehbemt441/files/inline-documents/<board>-<name>-<action-type>-<YYYYMMDD>.pdf  (observed: board-actions-mental-health-callahan-emergency-suspension-20240823.pdf; mental-health-practice-board-actions-rosario-order-of-dismissal-20250418.pdf)",
+      "confidence": "high",
+      "left_censor": "7 years (rolling)",
+      "notes": "TIER 1 STRUCTURE, BUT READ THE CENSORING NOTE. Actions are indexed by YEAR on parallel URLs, which makes enumeration trivial (iterate the year suffix). Filenames encode licensee, action type, and ISO date. HOWEVER the board explicitly retains disciplinary documents for only 7 YEARS - this truncates INSIDE the pipeline's current 10-year (2016-2026) window, so New Hampshire would contribute a structurally shorter series than other states and must not be compared naively on volume. Also note actions include orders of DISMISSAL, which are not sanctions and must be filtered out."
+    },
+    {
+      "state": "New Jersey",
+      "board": "Professional Counselor Examiners Committee (Div. of Consumer Affairs)",
+      "credentials": ["LPC", "LAC"],
+      "primary_model": "E",
+      "secondary_models": ["A"],
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://www.njconsumeraffairs.gov/pc"
+      ],
+      "probe_hint": "https://www.njconsumeraffairs.gov/pc/Pages/actions.aspx - INFERRED. Confirmed to exist for other NJ boards (e.g. /acc/Pages/actions.aspx). Probe before writing NJ off.",
+      "confidence": "medium",
+      "notes": "The Committee is a sub-committee of the Board of Marriage and Family Therapy Examiners, so counselor actions may be published under /mft rather than /pc - probe both. Disciplinary matters are handled in closed executive session, and public minutes are posted."
+    },
+    {
+      "state": "New Mexico",
+      "board": "Counseling and Therapy Practice Board (Regulation & Licensing Dept.)",
+      "credentials": ["LPCC", "LMHC", "LPAT", "LADAC"],
+      "primary_model": "E",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://www.rld.nm.gov/boards-and-commissions/individual-boards-and-commissions/counseling-and-therapy-practice/"
+      ],
+      "confidence": "low",
+      "notes": "No enumerable disciplinary list surfaced. RLD centralises boards; probe for an RLD-wide disciplinary actions or 'notices of contemplated action' page."
+    },
+    {
+      "state": "New York",
+      "board": "State Board for Mental Health Practitioners (NYSED Office of the Professions)",
+      "credentials": ["LMHC", "LMFT", "LCAT", "LP"],
+      "primary_model": "C",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://www.op.nysed.gov/enforcement/professional-misconduct-enforcement",
+        "https://www.op.nysed.gov/mental-health-counselors"
+      ],
+      "confidence": "high",
+      "notes": "STRONG CANDIDATE. Disciplinary actions are searchable BY YEAR, MONTH, AND PROFESSION - exactly the axes needed for systematic enumeration of counselor-only cases. Summaries of final actions also appear under an 'Enforcement Actions' tab in Online Verification results. Caveat: NYSED publishes SUMMARIES of final disciplinary actions rather than full orders, so conduct detail is compressed. Second caveat with research significance: New York's Professional Assistance Program lets impaired licensees surrender confidentially as an ALTERNATIVE to discipline, meaning substance-related cases are systematically underrepresented in the public record relative to other states."
+    },
+    {
+      "state": "North Carolina",
+      "board": "NC Board of Licensed Clinical Mental Health Counselors",
+      "credentials": ["LCMHC", "LCMHCA"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://www.ncblcmhc.org/Complaints/DisciplinaryActions"
+      ],
+      "confidence": "high",
+      "left_censor": "2005",
+      "notes": "TIER 1 TARGET. Single-profession board (no composite filtering) publishing disciplined counselors from 2005 to current - a ~20-year series, deeper than the pipeline's 10-year window needs. Structurally the cleanest single-state addition after Louisiana and Missouri."
+    },
+    {
+      "state": "North Dakota",
+      "board": "North Dakota Board of Counselor Examiners (NDBCE)",
+      "credentials": ["LPC", "LPCC", "LAPC"],
+      "primary_model": "E",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://www.ndbce.org/"
+      ],
+      "confidence": "low",
+      "notes": "No public disciplinary list surfaced. Most matters resolve by informal hearing or consent order. Very low volume. Records request is the practical route."
+    },
+    {
+      "state": "Ohio",
+      "board": "Counselor, Social Worker and Marriage & Family Therapist Board (CSWMFT)",
+      "credentials": ["LPC", "LPCC", "LSW", "LISW", "LMFT", "IMFT"],
+      "primary_model": "E",
+      "secondary_models": ["D"],
+      "enumerable": false,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://cswmft.ohio.gov/Whats-New"
+      ],
+      "document_url_pattern": "https://dam.assets.ohio.gov/image/upload/cswmft.ohio.gov/news-letter/<Season>_<Year>_CSWMFT_Board_Newsletter.pdf (naming varies: 2021-Spring.pdf, Summer_2025_...pdf)",
+      "confidence": "medium",
+      "notes": "Disciplinary actions are published inside quarterly BOARD NEWSLETTERS as name + credential + short reason (e.g. 'Valerie Bass (LISW) - Impairment'; 'Katherine Boyd-Viezer (LSW) - Audit Failure'). This is enumerable in practice by harvesting the newsletter archive, but the extraction is PDF-prose parsing rather than table parsing, the reason codes are extremely terse (often 2-3 words), and newsletter filenames are inconsistently formatted. Feasible but the highest effort-to-yield ratio of any enumerable state, and the conduct detail is too thin for meaningful violation-category coding."
+    },
+    {
+      "state": "Oklahoma",
+      "board": "State Board of Behavioral Health Licensure",
+      "credentials": ["LPC", "LMFT", "LBP", "LADC"],
+      "primary_model": "D",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://oklahoma.gov/behavioralhealth.html"
+      ],
+      "confidence": "medium",
+      "notes": "Counselor search reportedly discloses whether any disciplinary action has been taken and what it was - per-licensee, so not enumerable. Probe for a board-level disciplinary actions or board-minutes archive."
+    },
+    {
+      "state": "Oregon",
+      "board": "Board of Licensed Professional Counselors and Therapists (OBLPCT)",
+      "credentials": ["LPC", "LMFT"],
+      "primary_model": "B",
+      "secondary_models": ["D"],
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://www.oregon.gov/oblpct/pages/compliance.aspx",
+        "https://www.oregon.gov/oblpct/pages/sup_discipline.aspx",
+        "https://digitalcollections.library.oregon.gov/nodes/view/298778"
+      ],
+      "confidence": "high",
+      "notes": "Single-profession board issuing periodic DISCIPLINARY REPORTS (a 2021-05 edition is archived in the Oregon State Library digital collections, which is itself a useful backfill source independent of the board site). Licensee lookup additionally exposes board actions under a 'Disciplinary Actions' heading per record. Oregon also has a distinctive 'disciplinary supervision' regime worth noting given the pipeline's supervision-coding layer."
+    },
+    {
+      "state": "Pennsylvania",
+      "board": "State Board of Social Workers, Marriage and Family Therapists and Professional Counselors (Dept. of State / BPOA)",
+      "credentials": ["LPC", "LSW", "LCSW", "LMFT"],
+      "primary_model": "B",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://www.pa.gov/agencies/dos/alerts-and-notices/professional-licensing-disciplinary-actions"
+      ],
+      "confidence": "high",
+      "notes": "TIER 1 TARGET for structured fields. Monthly listing across all licensing boards with an unusually RICH per-entry schema: respondent name, license number, business address, sanction imposed, DESCRIPTION OF THE BASIS for the disciplinary measure, effective date, AND whether the action has been appealed. The 'basis' field plus appeal status is more than most model-B states publish and is close to what the violation-category recoder needs. Requires filtering to the counseling board."
+    },
+    {
+      "state": "Rhode Island",
+      "board": "Board of Mental Health Counselors and Marriage & Family Therapists (RI Dept. of Health)",
+      "credentials": ["LMHC", "LMFT", "MHCA"],
+      "primary_model": "C",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://health.ri.gov/licensing/disciplinaryactions",
+        "https://health.ri.gov/lists/disciplinaryactions/resultsbydate?prof=224"
+      ],
+      "confidence": "high",
+      "left_censor": "2014-12-09",
+      "notes": "STRONG CANDIDATE - note the PROFESSION-CODE QUERY PARAMETER (prof=224). That single parameter makes RI directly enumerable for the counselor profession without post-filtering; confirm which code maps to LMHC vs MHCA vs LMFT. DOH posts the DATE the order was entered AND THE FULL TEXT OF THE DECISION, which is exactly what the violation recoder wants. Two limits: actions before 2014-12-09 may not be posted (APRA request needed), and the default landing view is a rolling 60-day window, so backfill needs the date-parameterised route."
+    },
+    {
+      "state": "South Carolina",
+      "board": "Board of Examiners for Licensure of Professional Counselors, MFTs and Psycho-Educational Specialists (LLR)",
+      "credentials": ["LPC", "LPCA", "LMFT", "LPES"],
+      "primary_model": "D",
+      "secondary_models": ["A"],
+      "enumerable": false,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://llr.sc.gov/cou/pc.aspx",
+        "https://llr.sc.gov/cou/SancUnlicPrac.aspx",
+        "https://verify.llronline.com/LicLookup/Counselors/Counselors.aspx?div=18"
+      ],
+      "probe_hint": "https://llr.sc.gov/cou/finalorders.aspx - INFERRED from the CONFIRMED pattern at https://llr.sc.gov/boil/finalorders.aspx (a different LLR board). If this resolves, South Carolina jumps from model D to model A.",
+      "confidence": "medium",
+      "left_censor": "1994",
+      "notes": "The confirmed page llr.sc.gov/cou/SancUnlicPrac.aspx covers only sanctions for UNLICENSED PRACTICE, not licensee discipline - do not mistake it for the full disciplinary index. The inferred finalorders.aspx is the high-value probe here. Board minutes PDFs are published on a predictable llr.sc.gov/cou/Minutes/ path. Records before 1994 may not display."
+    },
+    {
+      "state": "South Dakota",
+      "board": "Board of Examiners for Counselors and Marriage and Family Therapists",
+      "credentials": ["LPC", "LPC-MH", "LMFT"],
+      "primary_model": "D",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://www.sdboardofcounselors.org/verify/",
+        "https://dss.sd.gov/licensingboards/counselors/counselors.aspx"
+      ],
+      "confidence": "medium",
+      "notes": "Public verification database FLAGS records that have disciplinary action, but discovery requires a name. If the verify endpoint supports a wildcard or full-roster listing, South Dakota becomes enumerable - worth one probe. Very low volume."
+    },
+    {
+      "state": "Tennessee",
+      "board": "Board for Licensed Professional Counselors, Licensed Marital & Family Therapists, and Licensed Clinical Pastoral Therapists (TN Dept. of Health)",
+      "credentials": ["LPC", "LPC-MHSP", "LMFT", "LCPT"],
+      "primary_model": "B",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://www.tn.gov/health/health-professionals/health-professionals-boards-disciplinary-actions.html",
+        "https://apps.health.tn.gov/Licensure/default.aspx"
+      ],
+      "document_url_pattern": "https://www.tn.gov/content/dam/tn/health/dar/<report>.pdf  (observed formats vary: 19.09-DAR.pdf, 18.03%20DAR.pdf, FEB-2024-DAR%20(1).pdf)",
+      "confidence": "high",
+      "notes": "TIER 1 TARGET. Monthly Disciplinary Action Report PDFs going back many years, released as a media summary of all health-related board actions. Long, deep archive. Two frictions: filename conventions are INCONSISTENT across years (YY.MM-DAR vs MON-YYYY-DAR, with stray suffixes), so the index page must be crawled rather than filenames guessed; and reports are large multi-profession documents (one observed at 28 pages) requiring per-board section parsing. Full per-licensee detail available via the license verification site."
+    },
+    {
+      "state": "Texas",
+      "board": "Texas State Board of Examiners of Professional Counselors (under Behavioral Health Executive Council)",
+      "credentials": ["LPC", "LPC-Associate"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [
+        "https://bhec.texas.gov/",
+        "https://bhec.texas.gov/resolution-of-a-complaint/"
+      ],
+      "confidence": "medium",
+      "notes": "HIGH PRIORITY PROBE - potentially the second-best addition after Florida. BHEC is documented as publicising enforcement actions against professional counselors on its website INCLUDING NAMES, ALLEGED VIOLATION, AND DISCIPLINARY ACTION - the alleged-violation field is precisely what the violation recoder needs. Denials, surrenders and revocations are stated to be posted PERMANENTLY, implying no retention truncation. The exact enforcement-actions URL was not isolated in two searches and must be found by probing bhec.texas.gov. Large state, high expected volume."
+    },
+    {
+      "state": "Utah",
+      "board": "Utah Professional Counselor Licensing Board (DOPL)",
+      "credentials": ["CMHC", "ACMHC"],
+      "primary_model": "B",
+      "enumerable": true,
+      "order_text": "summary",
+      "discipline_urls": [],
+      "confidence": "n/a",
+      "status": "ALREADY IN DATASET - not re-researched in this pass"
+    },
+    {
+      "state": "Vermont",
+      "board": "Board of Allied Mental Health Practitioners (Sec. of State, Office of Professional Regulation)",
+      "credentials": ["LCMHC", "LMFT", "LADC", "psychoanalyst"],
+      "primary_model": "A",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://sos.vermont.gov/allied-mental-health",
+        "https://www.sec.state.vt.us/professional-regulation/list-of-professions/allied-mental-health.aspx"
+      ],
+      "document_url_pattern": "https://outside.vermont.gov/dept/sos/office_professional_regulation/conduct_decisions/allied_mental_health/<name>_docket_<docket>.pdf  (observed: reed_luce_mary_docket_mh020903.pdf)",
+      "confidence": "high",
+      "notes": "STRONG CANDIDATE for structure. There is a per-profession CONDUCT_DECISIONS directory - a directory-per-board layout is close to ideal for enumeration if it is browsable or linked from an index page. Filenames embed licensee name and docket number (docket prefix 'mh' + date-like digits). Very small state, so low volume, but excellent full-text conduct decisions."
+    },
+    {
+      "state": "Virginia",
+      "board": "Virginia Board of Counseling (Dept. of Health Professions)",
+      "credentials": ["LPC", "LMFT", "LSATP", "Resident in Counseling"],
+      "primary_model": "C",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://www.dhp.virginia.gov/enforcement/cdecision/boardresults.asp?board=7",
+        "https://www.dhp.virginia.gov/Boards/Counseling/PractitionerResources/DisciplinaryProceedings/"
+      ],
+      "confidence": "high",
+      "notes": "TIER 1 TARGET - the single most scraper-friendly endpoint found. A case-decisions search returning results FILTERED BY BOARD ID via a plain query string (board=7 = Counseling), on a classic server-rendered .asp page: no JavaScript, no session state, trivially parameterisable. DHP also publishes a Sanctioning Reference Points Manual, which is directly useful for interpreting and normalising Virginia's sanction severity against other states."
+    },
+    {
+      "state": "Washington",
+      "board": "Dept. of Health, Health Systems Quality Assurance (mental health counselor credential)",
+      "credentials": ["LMHC", "LMHCA"],
+      "primary_model": "B",
+      "secondary_models": ["D"],
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://doh.wa.gov/newsroom/state-disciplines-health-care-providers-08-15-2025",
+        "https://doh.wa.gov/licenses-permits-and-certificates/professions-new-renew-or-update/mental-health-counselor"
+      ],
+      "document_url_pattern": "https://doh.wa.gov/newsroom/state-disciplines-health-care-providers-<MM-DD-YYYY>  (many dated editions observed across 2025)",
+      "confidence": "high",
+      "left_censor": "1998-07 (for legal documents via lookup)",
+      "notes": "Recurring 'State disciplines health care providers' NEWSROOM RELEASES on a date-templated URL, issued roughly monthly-to-fortnightly and covering all 80+ regulated professions. Enumerable by iterating dates, but the format is press-release PROSE (name, credential, county, charge, action in narrative sentences) rather than tabular - parsing is regex-and-heuristics work. Copies of actual legal documents issued after July 1998 are available through the Provider Credential Search per licensee. Note WA is a department-not-board state: there is no independent counselor board issuing the orders."
+    },
+    {
+      "state": "West Virginia",
+      "board": "West Virginia Board of Examiners in Counseling (WVBEC)",
+      "credentials": ["LPC", "ALC", "LMFT"],
+      "primary_model": "E",
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://wvbec.org/",
+        "https://wvbec.org/about-wvbec/"
+      ],
+      "confidence": "low",
+      "notes": "Board describes issuing Consent Agreements and Orders signed by licensee and board chair, and specific sanction terms appear in a legislative regulatory-review report - but no enumerable public index of those orders surfaced. Probe wvbec.org directly; small single-profession boards sometimes have an unlinked or awkwardly-named disciplinary page."
+    },
+    {
+      "state": "Wisconsin",
+      "board": "Marriage and Family Therapy, Professional Counseling and Social Work Examining Board - Professional Counselor Section (DSPS)",
+      "credentials": ["LPC", "LMFT", "LCSW", "APSW"],
+      "primary_model": "C",
+      "enumerable": true,
+      "order_text": "full",
+      "discipline_urls": [
+        "https://online.drl.wi.gov/orders/searchorders.aspx",
+        "https://dsps.wi.gov/Pages/SelfService/OrdersDisciplinaryActions.aspx"
+      ],
+      "document_url_pattern": "https://online.drl.wi.gov/decisions/<YYYY>/ORDER<nnnnnnn>-<nnnnnnnn>.pdf  (observed: /decisions/2023/ORDER0008652-00020373.pdf)",
+      "confidence": "high",
+      "left_censor": "1998-11 (comprehensive); partial back to 1977",
+      "notes": "TIER 1 TARGET, DEEPEST ARCHIVE FOUND. 'Reports of Decisions' is a searchable database containing COPIES OF ALL ORDERS issued by credentialing authorities from November 1998 to present, with many 1977-1998 orders also posted - a potential ~27-year series. Order PDFs live on a year-partitioned path with sequential numeric IDs. Explicitly framed as open under Wisconsin's Open Records law (ss. 19.31-19.39), which is about as clean a legal posture as this project will find. IMPORTANT CODING CAVEAT: DSPS states plainly that NOT ALL ORDERS CONSTITUTE FORMAL DISCIPLINARY ACTION, so the raw result set must be filtered before it enters sanction analysis or it will inflate counts."
+    },
+    {
+      "state": "Wyoming",
+      "board": "Wyoming Mental Health Professions Licensing Board",
+      "credentials": ["LPC", "LCSW", "LMFT", "LAT", "CMHW"],
+      "primary_model": "E",
+      "secondary_models": ["D"],
+      "enumerable": false,
+      "order_text": "none",
+      "discipline_urls": [
+        "https://mentalhealth.wyo.gov/public/discipline",
+        "https://mentalhealth.wyo.gov/public/complaints"
+      ],
+      "confidence": "medium",
+      "notes": "A dedicated /public/discipline page EXISTS and should be probed first - it may or may not enumerate cases. Investigations are confidential until the board votes in a public meeting. Notably, a Wyoming board order was found mirrored on a third-party site (healthgrades sanctions PDF), a reminder that aggregators sometimes hold orders that boards no longer serve. Very low volume."
+    }
+  ]
+}
