@@ -2,25 +2,31 @@
    M.S. in Counselor Education, William Carey University
    Tradition Campus recruitment landing page
 
-   Mobile-first. One accent color (gold) used sparingly on
-   calls to action and section markers. Deep navy and warm
-   cream carry the rest of the page.
+   Palette matches WCU's official identity: crimson red, black,
+   and white. Crimson is the single accent, used on calls to
+   action and section markers. Per the WCU identity standards,
+   red and black are kept from touching directly.
+
+   NOTE: the crimson below is a standard collegiate crimson
+   (PMS 201 equivalent). If the WCU Identity Standards Manual
+   specifies a different hex value, change --crimson and
+   --crimson-dark here and everything updates.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap');
 
 :root {
-  --navy: #0a1628;
-  --navy-mid: #112240;
-  --gold: #c9a84c;
-  --gold-dark: #a5883a;
-  --cream: #f5f0e8;
+  --crimson: #9d2235;
+  --crimson-dark: #7a1b2a;
+  --crimson-deep: #5e141f;
+  --black: #1a1a1a;
   --white: #ffffff;
-  --text-dark: #0a1628;
-  --text-mid: #2c3e50;
-  --text-soft: #55606e;
-  --border: #d4c9b0;
-  --shadow: 0 4px 24px rgba(10, 22, 40, 0.10);
+  --off-white: #faf8f6;
+  --text-dark: #1a1a1a;
+  --text-mid: #3d3d3d;
+  --text-soft: #6b6560;
+  --border: #ddd5cf;
+  --shadow: 0 4px 24px rgba(26, 26, 26, 0.08);
 }
 
 * {
@@ -34,17 +40,17 @@ html {
 }
 
 body {
-  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Open Sans', 'Segoe UI', system-ui, sans-serif;
   font-size: 1.0625rem;
   line-height: 1.65;
-  background: var(--cream);
+  background: var(--off-white);
   color: var(--text-dark);
 }
 
 h1, h2, h3 {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-weight: 400;
-  line-height: 1.2;
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 /* Accessibility helpers ------------------------------------- */
@@ -53,7 +59,7 @@ h1, h2, h3 {
   position: absolute;
   left: -9999px;
   top: 0;
-  background: var(--navy);
+  background: var(--black);
   color: var(--white);
   padding: 0.75rem 1.25rem;
   z-index: 10;
@@ -69,20 +75,27 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--gold-dark);
+  outline: 3px solid var(--crimson);
   outline-offset: 2px;
+}
+
+.hero a:focus-visible,
+.section-featured a:focus-visible,
+.section-close a:focus-visible,
+.section-close button:focus-visible {
+  outline-color: var(--white);
 }
 
 /* Buttons ---------------------------------------------------- */
 
 .btn {
   display: inline-block;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Open Sans', sans-serif;
   font-size: 1.0625rem;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
   text-align: center;
-  border-radius: 999px;
+  border-radius: 6px;
   padding: 0.9rem 2rem;
   cursor: pointer;
   border: 2px solid transparent;
@@ -90,50 +103,64 @@ summary:focus-visible {
 }
 
 .btn-primary {
-  background: var(--gold);
-  color: var(--navy);
-  border-color: var(--gold);
+  background: var(--crimson);
+  color: var(--white);
+  border-color: var(--crimson);
 }
 
 .btn-primary:hover {
-  background: var(--gold-dark);
-  border-color: var(--gold-dark);
-  color: var(--white);
+  background: var(--crimson-dark);
+  border-color: var(--crimson-dark);
 }
 
 .btn-secondary {
   background: transparent;
-  color: var(--navy);
-  border-color: var(--navy);
+  color: var(--crimson);
+  border-color: var(--crimson);
 }
 
 .btn-secondary:hover {
-  background: var(--navy);
+  background: var(--crimson);
   color: var(--white);
+}
+
+/* On crimson backgrounds the primary button inverts to white */
+.hero .btn-primary {
+  background: var(--white);
+  color: var(--crimson);
+  border-color: var(--white);
+}
+
+.hero .btn-primary:hover {
+  background: var(--off-white);
+  border-color: var(--off-white);
 }
 
 /* 1. Hero ---------------------------------------------------- */
 
 .hero {
-  background: linear-gradient(175deg, var(--navy) 0%, var(--navy-mid) 100%);
+  background: linear-gradient(175deg, var(--crimson-dark) 0%, var(--crimson) 100%);
   color: var(--white);
   text-align: center;
   padding: 4rem 1.5rem 3rem;
 }
 
 .hero-banner {
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
   font-size: 1.375rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--white);
 }
 
 .hero-scripture {
   max-width: 34rem;
   margin: 1.75rem auto 0;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Merriweather', Georgia, serif;
   font-style: italic;
+  font-weight: 400;
   font-size: 1.0625rem;
 }
 
@@ -143,20 +170,20 @@ summary:focus-visible {
   font-style: normal;
   font-size: 0.9375rem;
   letter-spacing: 0.06em;
-  color: var(--gold);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hero-headline {
   max-width: 44rem;
   margin: 2.25rem auto 0;
-  font-size: clamp(1.75rem, 5vw, 2.75rem);
+  font-size: clamp(1.625rem, 5vw, 2.5rem);
 }
 
 .hero-program {
   margin: 1.25rem auto 0;
   font-size: 0.9375rem;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hero .btn-primary {
@@ -169,7 +196,7 @@ summary:focus-visible {
   max-width: 44rem;
   margin: 2.5rem auto 0;
   border: 2px dashed var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 3.5rem 1.5rem;
   text-align: center;
   color: var(--text-soft);
@@ -179,8 +206,8 @@ summary:focus-visible {
 }
 
 .hero .image-placeholder {
-  color: rgba(255, 255, 255, 0.6);
-  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.75);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Section scaffolding ---------------------------------------- */
@@ -192,13 +219,13 @@ summary:focus-visible {
 }
 
 .section h2 {
-  font-size: clamp(1.625rem, 4.5vw, 2.25rem);
+  font-size: clamp(1.5rem, 4.5vw, 2.125rem);
   margin-bottom: 1.75rem;
   position: relative;
   padding-bottom: 0.875rem;
 }
 
-/* Gold section marker, the accent used sparingly */
+/* Crimson section marker, the accent used sparingly */
 .section h2::after {
   content: "";
   position: absolute;
@@ -206,7 +233,7 @@ summary:focus-visible {
   bottom: 0;
   width: 3.5rem;
   height: 3px;
-  background: var(--gold);
+  background: var(--crimson);
   border-radius: 2px;
 }
 
@@ -231,15 +258,16 @@ summary:focus-visible {
 
 .gather-line {
   margin-top: 1.75rem;
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.375rem;
-  color: var(--navy);
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--crimson);
 }
 
 /* 3. How it works, the featured section ---------------------- */
 
 .section-featured {
-  background: var(--navy);
+  background: var(--crimson);
   color: var(--white);
 }
 
@@ -247,17 +275,23 @@ summary:focus-visible {
   color: var(--white);
 }
 
+.section-featured h2::after {
+  background: var(--white);
+}
+
 .section-featured .lead {
   font-size: 1.125rem;
   margin-bottom: 1.5rem;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .how-tagline {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.5rem;
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1.375rem;
   margin-top: 2rem;
-  color: var(--gold);
+  color: var(--white);
 }
 
 /* 4. Two paths ----------------------------------------------- */
@@ -269,16 +303,16 @@ summary:focus-visible {
 
 .path-card {
   background: var(--white);
-  border-radius: 12px;
-  border-top: 4px solid var(--gold);
+  border-radius: 8px;
+  border-top: 4px solid var(--crimson);
   box-shadow: var(--shadow);
   padding: 2rem 1.75rem;
 }
 
 .path-card h3 {
-  font-size: 1.375rem;
+  font-size: 1.25rem;
   margin-bottom: 0.875rem;
-  color: var(--navy);
+  color: var(--crimson);
 }
 
 .path-card p {
@@ -288,9 +322,9 @@ summary:focus-visible {
 /* 5. Proof --------------------------------------------------- */
 
 .placeholder-notice {
-  border: 2px dashed var(--gold-dark);
+  border: 2px dashed var(--crimson);
   border-radius: 8px;
-  background: rgba(201, 168, 76, 0.12);
+  background: rgba(157, 34, 53, 0.07);
   color: var(--text-mid);
   font-size: 0.9375rem;
   padding: 0.875rem 1.125rem;
@@ -304,7 +338,7 @@ summary:focus-visible {
 
 .testimonial {
   background: var(--white);
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: var(--shadow);
   padding: 2rem 1.75rem;
 }
@@ -316,8 +350,8 @@ summary:focus-visible {
 
 .testimonial blockquote p::before {
   content: "\201C";
-  color: var(--gold);
-  font-family: 'DM Serif Display', Georgia, serif;
+  color: var(--crimson);
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 1.5em;
   line-height: 0;
   margin-right: 0.125rem;
@@ -330,8 +364,8 @@ summary:focus-visible {
 
 .testimonial-name {
   display: block;
-  font-weight: 600;
-  color: var(--navy);
+  font-weight: 700;
+  color: var(--text-dark);
 }
 
 .testimonial-tag {
@@ -340,14 +374,14 @@ summary:focus-visible {
 }
 
 .section-proof .image-placeholder {
-  background: rgba(10, 22, 40, 0.03);
+  background: rgba(26, 26, 26, 0.03);
 }
 
 /* 6. FAQ ----------------------------------------------------- */
 
 .faq details {
   background: var(--white);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--shadow);
   margin-bottom: 0.875rem;
   overflow: hidden;
@@ -356,8 +390,8 @@ summary:focus-visible {
 .faq summary {
   list-style: none;
   cursor: pointer;
-  font-weight: 600;
-  color: var(--navy);
+  font-weight: 700;
+  color: var(--text-dark);
   padding: 1.125rem 3rem 1.125rem 1.375rem;
   position: relative;
 }
@@ -374,7 +408,7 @@ summary:focus-visible {
   transform: translateY(-50%);
   font-size: 1.5rem;
   font-weight: 400;
-  color: var(--gold-dark);
+  color: var(--crimson);
   transition: transform 0.15s ease;
 }
 
@@ -394,7 +428,7 @@ summary:focus-visible {
 /* 7. Close --------------------------------------------------- */
 
 .section-close {
-  background: var(--navy);
+  background: var(--crimson);
   color: var(--white);
 }
 
@@ -404,6 +438,7 @@ summary:focus-visible {
 }
 
 .section-close h2::after {
+  background: var(--white);
   left: 50%;
   transform: translateX(-50%);
 }
@@ -415,12 +450,12 @@ summary:focus-visible {
 }
 
 .door {
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 2rem 1.75rem;
 }
 
 .door h3 {
-  font-size: 1.375rem;
+  font-size: 1.25rem;
   margin-bottom: 0.75rem;
 }
 
@@ -432,35 +467,38 @@ summary:focus-visible {
 .door-primary {
   background: var(--white);
   color: var(--text-dark);
-  border-top: 4px solid var(--gold);
 }
 
 .door-primary h3 {
-  color: var(--navy);
+  color: var(--crimson);
 }
 
 .door-primary p {
   color: var(--text-mid);
 }
 
-/* The secondary door stays quiet on the navy background */
+/* The secondary door stays quiet on the crimson background */
 .door-secondary {
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: var(--white);
+}
+
+.door-secondary h3 {
   color: var(--white);
 }
 
 .door-secondary p {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .door-secondary .btn-secondary {
   color: var(--white);
-  border-color: rgba(255, 255, 255, 0.7);
+  border-color: var(--white);
 }
 
 .door-secondary .btn-secondary:hover {
   background: var(--white);
-  color: var(--navy);
+  color: var(--crimson);
 }
 
 /* Form ------------------------------------------------------- */
@@ -471,10 +509,10 @@ summary:focus-visible {
 
 .form-field label {
   display: block;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9375rem;
   margin-bottom: 0.375rem;
-  color: var(--navy);
+  color: var(--text-dark);
 }
 
 .form-field input,
@@ -484,9 +522,9 @@ summary:focus-visible {
   font-family: inherit;
   font-size: 1rem;
   color: var(--text-dark);
-  background: var(--cream);
+  background: var(--off-white);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 0.75rem 0.875rem;
 }
 
@@ -494,11 +532,13 @@ summary:focus-visible {
   resize: vertical;
 }
 
-/* Footer ----------------------------------------------------- */
+/* Footer ------------------------------------------------------
+   Kept in deep crimson rather than black: the WCU identity
+   standards ask that red and black not touch directly. */
 
 .footer {
-  background: var(--navy-mid);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--crimson-deep);
+  color: rgba(255, 255, 255, 0.85);
   text-align: center;
   font-size: 0.9375rem;
   padding: 2rem 1.5rem;
