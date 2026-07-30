@@ -10,7 +10,9 @@
    NOTE: the crimson below is a standard collegiate crimson
    (PMS 201 equivalent). If the WCU Identity Standards Manual
    specifies a different hex value, change --crimson and
-   --crimson-dark here and everything updates.
+   --crimson-dark here and everything updates. The curved
+   section dividers in index.html hard-code the crimson fill,
+   so update those two svg path fills to match as well.
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap');
@@ -22,11 +24,13 @@
   --black: #1a1a1a;
   --white: #ffffff;
   --off-white: #faf8f6;
+  --warm-tint: #f6efe9;
   --text-dark: #1a1a1a;
   --text-mid: #3d3d3d;
   --text-soft: #6b6560;
   --border: #ddd5cf;
   --shadow: 0 4px 24px rgba(26, 26, 26, 0.08);
+  --shadow-lift: 0 10px 32px rgba(26, 26, 26, 0.12);
 }
 
 * {
@@ -86,6 +90,33 @@ summary:focus-visible {
   outline-color: var(--white);
 }
 
+/* Top institutional bar -------------------------------------- */
+
+.topbar {
+  background: var(--white);
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 3px solid var(--crimson);
+}
+
+.topbar-name {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--crimson);
+  letter-spacing: 0.02em;
+}
+
+.topbar-campus {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-soft);
+}
+
 /* Buttons ---------------------------------------------------- */
 
 .btn {
@@ -99,7 +130,14 @@ summary:focus-visible {
   padding: 0.9rem 2rem;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease,
+              border-color 0.15s ease, transform 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
 }
 
 .btn-primary {
@@ -139,17 +177,22 @@ summary:focus-visible {
 /* 1. Hero ---------------------------------------------------- */
 
 .hero {
-  background: linear-gradient(175deg, var(--crimson-dark) 0%, var(--crimson) 100%);
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255, 255, 255, 0.14), transparent 60%),
+    linear-gradient(175deg, var(--crimson-dark) 0%, var(--crimson) 100%);
   color: var(--white);
   text-align: center;
-  padding: 4rem 1.5rem 3rem;
+}
+
+.hero-inner {
+  padding: 3.5rem 1.5rem 1rem;
 }
 
 .hero-banner {
   font-family: 'Merriweather', Georgia, serif;
   font-weight: 700;
   font-size: 1.375rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--white);
 }
@@ -157,7 +200,7 @@ summary:focus-visible {
 .hero-scripture {
   max-width: 34rem;
   margin: 1.75rem auto 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
   font-family: 'Merriweather', Georgia, serif;
   font-style: italic;
   font-weight: 400;
@@ -173,9 +216,26 @@ summary:focus-visible {
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* quiet line-and-diamond ornament under the scripture */
+.ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1.75rem auto 0;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.ornament-line {
+  display: inline-block;
+  width: 3.5rem;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
 .hero-headline {
   max-width: 44rem;
-  margin: 2.25rem auto 0;
+  margin: 1.75rem auto 0;
   font-size: clamp(1.625rem, 5vw, 2.5rem);
 }
 
@@ -190,24 +250,62 @@ summary:focus-visible {
   margin-top: 2rem;
 }
 
-/* Image placeholders (hero and proof) ----------------------- */
-
-.image-placeholder {
-  max-width: 44rem;
-  margin: 2.5rem auto 0;
-  border: 2px dashed var(--border);
-  border-radius: 8px;
-  padding: 3.5rem 1.5rem;
-  text-align: center;
-  color: var(--text-soft);
-  font-size: 0.9375rem;
-  letter-spacing: 0.05em;
-  background: rgba(255, 255, 255, 0.06);
+.hero-photo {
+  max-width: 40rem;
+  margin: 2.75rem auto 0;
 }
 
-.hero .image-placeholder {
-  color: rgba(255, 255, 255, 0.75);
-  border-color: rgba(255, 255, 255, 0.4);
+/* Curved section dividers ------------------------------------ */
+
+.divider {
+  display: block;
+  width: 100%;
+  height: 3rem;
+}
+
+.featured-wrap .divider {
+  background: var(--off-white);
+}
+
+.hero .divider-light {
+  margin-top: -1px;
+}
+
+/* Placeholder photo frames -----------------------------------
+   These hold illustrated stand-ins until real photos arrive.
+   Swap each <figure class="placeholder-frame"> for a real
+   <img> before launch. */
+
+.placeholder-frame {
+  background: var(--white);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lift);
+  padding: 0.625rem 0.625rem 0;
+  overflow: hidden;
+}
+
+.placeholder-frame .illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.placeholder-tag {
+  display: block;
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--warm-tint),
+    var(--warm-tint) 10px,
+    var(--white) 10px,
+    var(--white) 20px
+  );
+  padding: 0.5rem 0.75rem;
+  margin: 0.625rem -0.625rem 0;
 }
 
 /* Section scaffolding ---------------------------------------- */
@@ -251,9 +349,40 @@ summary:focus-visible {
 
 /* 2. Is this you --------------------------------------------- */
 
-.portraits p {
-  margin-bottom: 1.25rem;
+.portraits {
+  display: grid;
+  gap: 1rem;
+}
+
+.portrait-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--white);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 1.375rem 1.5rem;
+}
+
+.portrait-card p {
   color: var(--text-mid);
+}
+
+.portrait-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--warm-tint);
+  color: var(--crimson);
+}
+
+.portrait-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .gather-line {
@@ -262,13 +391,20 @@ summary:focus-visible {
   font-weight: 700;
   font-size: 1.25rem;
   color: var(--crimson);
+  text-align: center;
 }
 
 /* 3. How it works, the featured section ---------------------- */
 
+.featured-wrap {
+  background: var(--off-white);
+}
+
 .section-featured {
   background: var(--crimson);
   color: var(--white);
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
 }
 
 .section-featured h2 {
@@ -279,10 +415,41 @@ summary:focus-visible {
   background: var(--white);
 }
 
-.section-featured .lead {
-  font-size: 1.125rem;
-  margin-bottom: 1.5rem;
+.steps {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.125rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 1.375rem 1.5rem;
+}
+
+.step p {
+  font-size: 1.0625rem;
   color: rgba(255, 255, 255, 0.95);
+}
+
+.step-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--crimson);
+}
+
+.step-icon svg {
+  width: 1.625rem;
+  height: 1.625rem;
 }
 
 .how-tagline {
@@ -292,6 +459,7 @@ summary:focus-visible {
   font-size: 1.375rem;
   margin-top: 2rem;
   color: var(--white);
+  text-align: center;
 }
 
 /* 4. Two paths ----------------------------------------------- */
@@ -303,10 +471,33 @@ summary:focus-visible {
 
 .path-card {
   background: var(--white);
-  border-radius: 8px;
+  border-radius: 10px;
   border-top: 4px solid var(--crimson);
   box-shadow: var(--shadow);
   padding: 2rem 1.75rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.path-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+}
+
+.path-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--warm-tint);
+  color: var(--crimson);
+  margin-bottom: 1.125rem;
+}
+
+.path-icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .path-card h3 {
@@ -337,10 +528,23 @@ summary:focus-visible {
 }
 
 .testimonial {
+  position: relative;
   background: var(--white);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: var(--shadow);
-  padding: 2rem 1.75rem;
+  padding: 2rem 1.75rem 2rem 1.75rem;
+}
+
+.testimonial-avatar {
+  display: inline-block;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+}
+
+.testimonial-avatar svg {
+  width: 100%;
+  height: 100%;
 }
 
 .testimonial blockquote p {
@@ -373,8 +577,8 @@ summary:focus-visible {
   color: var(--text-soft);
 }
 
-.section-proof .image-placeholder {
-  background: rgba(26, 26, 26, 0.03);
+.proof-photo {
+  margin-top: 2.5rem;
 }
 
 /* 6. FAQ ----------------------------------------------------- */
@@ -385,6 +589,12 @@ summary:focus-visible {
   box-shadow: var(--shadow);
   margin-bottom: 0.875rem;
   overflow: hidden;
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.faq details[open] {
+  border-left-color: var(--crimson);
 }
 
 .faq summary {
@@ -430,6 +640,7 @@ summary:focus-visible {
 .section-close {
   background: var(--crimson);
   color: var(--white);
+  padding-top: 2.5rem;
 }
 
 .section-close h2 {
@@ -450,7 +661,7 @@ summary:focus-visible {
 }
 
 .door {
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 2rem 1.75rem;
 }
 
@@ -467,6 +678,7 @@ summary:focus-visible {
 .door-primary {
   background: var(--white);
   color: var(--text-dark);
+  box-shadow: var(--shadow-lift);
 }
 
 .door-primary h3 {
@@ -544,6 +756,13 @@ summary:focus-visible {
   padding: 2rem 1.5rem;
 }
 
+.footer-name {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  color: var(--white);
+}
+
 /* Larger screens --------------------------------------------- */
 
 @media (min-width: 720px) {
@@ -551,8 +770,18 @@ summary:focus-visible {
     padding: 4.5rem 2rem;
   }
 
-  .hero {
-    padding: 5.5rem 2rem 4rem;
+  .section-featured,
+  .section-close {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .hero-inner {
+    padding: 5rem 2rem 1.5rem;
+  }
+
+  .divider {
+    height: 4rem;
   }
 
   .paths {
