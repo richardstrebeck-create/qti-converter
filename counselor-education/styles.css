@@ -1,0 +1,795 @@
+/* ============================================================
+   M.S. in Counselor Education, William Carey University
+   Tradition Campus recruitment landing page
+
+   Palette matches WCU's official identity: crimson red, black,
+   and white. Crimson is the single accent, used on calls to
+   action and section markers. Per the WCU identity standards,
+   red and black are kept from touching directly.
+
+   NOTE: the crimson below is a standard collegiate crimson
+   (PMS 201 equivalent). If the WCU Identity Standards Manual
+   specifies a different hex value, change --crimson and
+   --crimson-dark here and everything updates. The curved
+   section dividers in index.html hard-code the crimson fill,
+   so update those two svg path fills to match as well.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Open+Sans:wght@400;600;700&display=swap');
+
+:root {
+  --crimson: #9d2235;
+  --crimson-dark: #7a1b2a;
+  --crimson-deep: #5e141f;
+  --black: #1a1a1a;
+  --white: #ffffff;
+  --off-white: #faf8f6;
+  --warm-tint: #f6efe9;
+  --text-dark: #1a1a1a;
+  --text-mid: #3d3d3d;
+  --text-soft: #6b6560;
+  --border: #ddd5cf;
+  --shadow: 0 4px 24px rgba(26, 26, 26, 0.08);
+  --shadow-lift: 0 10px 32px rgba(26, 26, 26, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Open Sans', 'Segoe UI', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  background: var(--off-white);
+  color: var(--text-dark);
+}
+
+h1, h2, h3 {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Accessibility helpers ------------------------------------- */
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--black);
+  color: var(--white);
+  padding: 0.75rem 1.25rem;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--crimson);
+  outline-offset: 2px;
+}
+
+.hero a:focus-visible,
+.section-featured a:focus-visible,
+.section-close a:focus-visible,
+.section-close button:focus-visible {
+  outline-color: var(--white);
+}
+
+/* Top institutional bar -------------------------------------- */
+
+.topbar {
+  background: var(--white);
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 3px solid var(--crimson);
+}
+
+.topbar-name {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--crimson);
+  letter-spacing: 0.02em;
+}
+
+.topbar-campus {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-soft);
+}
+
+/* Buttons ---------------------------------------------------- */
+
+.btn {
+  display: inline-block;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  border-radius: 6px;
+  padding: 0.9rem 2rem;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease,
+              border-color 0.15s ease, transform 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+.btn-primary {
+  background: var(--crimson);
+  color: var(--white);
+  border-color: var(--crimson);
+}
+
+.btn-primary:hover {
+  background: var(--crimson-dark);
+  border-color: var(--crimson-dark);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--crimson);
+  border-color: var(--crimson);
+}
+
+.btn-secondary:hover {
+  background: var(--crimson);
+  color: var(--white);
+}
+
+/* On crimson backgrounds the primary button inverts to white */
+.hero .btn-primary {
+  background: var(--white);
+  color: var(--crimson);
+  border-color: var(--white);
+}
+
+.hero .btn-primary:hover {
+  background: var(--off-white);
+  border-color: var(--off-white);
+}
+
+/* 1. Hero ---------------------------------------------------- */
+
+.hero {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255, 255, 255, 0.14), transparent 60%),
+    linear-gradient(175deg, var(--crimson-dark) 0%, var(--crimson) 100%);
+  color: var(--white);
+  text-align: center;
+}
+
+.hero-inner {
+  padding: 3.5rem 1.5rem 1rem;
+}
+
+.hero-banner {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.375rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+
+.hero-scripture {
+  max-width: 34rem;
+  margin: 1.75rem auto 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: 'Merriweather', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.0625rem;
+}
+
+.hero-scripture cite {
+  display: block;
+  margin-top: 0.5rem;
+  font-style: normal;
+  font-size: 0.9375rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* quiet line-and-diamond ornament under the scripture */
+.ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1.75rem auto 0;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.ornament-line {
+  display: inline-block;
+  width: 3.5rem;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.hero-headline {
+  max-width: 44rem;
+  margin: 1.75rem auto 0;
+  font-size: clamp(1.625rem, 5vw, 2.5rem);
+}
+
+.hero-program {
+  margin: 1.25rem auto 0;
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero .btn-primary {
+  margin-top: 2rem;
+}
+
+.hero-photo {
+  max-width: 40rem;
+  margin: 2.75rem auto 0;
+}
+
+/* Curved section dividers ------------------------------------ */
+
+.divider {
+  display: block;
+  width: 100%;
+  height: 3rem;
+}
+
+.featured-wrap .divider {
+  background: var(--off-white);
+}
+
+.hero .divider-light {
+  margin-top: -1px;
+}
+
+/* Placeholder photo frames -----------------------------------
+   These hold illustrated stand-ins until real photos arrive.
+   Swap each <figure class="placeholder-frame"> for a real
+   <img> before launch. */
+
+.placeholder-frame {
+  background: var(--white);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lift);
+  padding: 0.625rem 0.625rem 0;
+  overflow: hidden;
+}
+
+.placeholder-frame .illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.placeholder-tag {
+  display: block;
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--warm-tint),
+    var(--warm-tint) 10px,
+    var(--white) 10px,
+    var(--white) 20px
+  );
+  padding: 0.5rem 0.75rem;
+  margin: 0.625rem -0.625rem 0;
+}
+
+/* Section scaffolding ---------------------------------------- */
+
+.section {
+  padding: 3.5rem 1.5rem;
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.section h2 {
+  font-size: clamp(1.5rem, 4.5vw, 2.125rem);
+  margin-bottom: 1.75rem;
+  position: relative;
+  padding-bottom: 0.875rem;
+}
+
+/* Crimson section marker, the accent used sparingly */
+.section h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 3.5rem;
+  height: 3px;
+  background: var(--crimson);
+  border-radius: 2px;
+}
+
+/* Full-bleed featured and close sections wrap their content */
+.section-featured,
+.section-close {
+  max-width: none;
+  margin: 0;
+}
+
+.section-inner {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+/* 2. Is this you --------------------------------------------- */
+
+.portraits {
+  display: grid;
+  gap: 1rem;
+}
+
+.portrait-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--white);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 1.375rem 1.5rem;
+}
+
+.portrait-card p {
+  color: var(--text-mid);
+}
+
+.portrait-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--warm-tint);
+  color: var(--crimson);
+}
+
+.portrait-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.gather-line {
+  margin-top: 1.75rem;
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--crimson);
+  text-align: center;
+}
+
+/* 3. How it works, the featured section ---------------------- */
+
+.featured-wrap {
+  background: var(--off-white);
+}
+
+.section-featured {
+  background: var(--crimson);
+  color: var(--white);
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+
+.section-featured h2 {
+  color: var(--white);
+}
+
+.section-featured h2::after {
+  background: var(--white);
+}
+
+.steps {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.125rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 1.375rem 1.5rem;
+}
+
+.step p {
+  font-size: 1.0625rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.step-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--crimson);
+}
+
+.step-icon svg {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
+.how-tagline {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1.375rem;
+  margin-top: 2rem;
+  color: var(--white);
+  text-align: center;
+}
+
+/* 4. Two paths ----------------------------------------------- */
+
+.paths {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.path-card {
+  background: var(--white);
+  border-radius: 10px;
+  border-top: 4px solid var(--crimson);
+  box-shadow: var(--shadow);
+  padding: 2rem 1.75rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.path-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+}
+
+.path-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--warm-tint);
+  color: var(--crimson);
+  margin-bottom: 1.125rem;
+}
+
+.path-icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.path-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.875rem;
+  color: var(--crimson);
+}
+
+.path-card p {
+  color: var(--text-mid);
+}
+
+/* 5. Proof --------------------------------------------------- */
+
+.placeholder-notice {
+  border: 2px dashed var(--crimson);
+  border-radius: 8px;
+  background: rgba(157, 34, 53, 0.07);
+  color: var(--text-mid);
+  font-size: 0.9375rem;
+  padding: 0.875rem 1.125rem;
+  margin-bottom: 1.75rem;
+}
+
+.testimonials {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.testimonial {
+  position: relative;
+  background: var(--white);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 2rem 1.75rem 2rem 1.75rem;
+}
+
+.testimonial-avatar {
+  display: inline-block;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+}
+
+.testimonial-avatar svg {
+  width: 100%;
+  height: 100%;
+}
+
+.testimonial blockquote p {
+  color: var(--text-mid);
+  font-style: italic;
+}
+
+.testimonial blockquote p::before {
+  content: "\201C";
+  color: var(--crimson);
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1.5em;
+  line-height: 0;
+  margin-right: 0.125rem;
+}
+
+.testimonial figcaption {
+  margin-top: 1.25rem;
+  font-size: 0.9375rem;
+}
+
+.testimonial-name {
+  display: block;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.testimonial-tag {
+  display: block;
+  color: var(--text-soft);
+}
+
+.proof-photo {
+  margin-top: 2.5rem;
+}
+
+/* 6. FAQ ----------------------------------------------------- */
+
+.faq details {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  margin-bottom: 0.875rem;
+  overflow: hidden;
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.faq details[open] {
+  border-left-color: var(--crimson);
+}
+
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-dark);
+  padding: 1.125rem 3rem 1.125rem 1.375rem;
+  position: relative;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::after {
+  content: "+";
+  position: absolute;
+  right: 1.375rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--crimson);
+  transition: transform 0.15s ease;
+}
+
+.faq details[open] summary::after {
+  content: "\2013";
+}
+
+.faq-answer {
+  padding: 0 1.375rem 1.25rem;
+  color: var(--text-mid);
+}
+
+.faq-answer p + p {
+  margin-top: 0.875rem;
+}
+
+/* 7. Close --------------------------------------------------- */
+
+.section-close {
+  background: var(--crimson);
+  color: var(--white);
+  padding-top: 2.5rem;
+}
+
+.section-close h2 {
+  color: var(--white);
+  text-align: center;
+}
+
+.section-close h2::after {
+  background: var(--white);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.close-doors {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.door {
+  border-radius: 10px;
+  padding: 2rem 1.75rem;
+}
+
+.door h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.door p {
+  margin-bottom: 1.5rem;
+}
+
+/* The primary door is visually warmer */
+.door-primary {
+  background: var(--white);
+  color: var(--text-dark);
+  box-shadow: var(--shadow-lift);
+}
+
+.door-primary h3 {
+  color: var(--crimson);
+}
+
+.door-primary p {
+  color: var(--text-mid);
+}
+
+/* The secondary door stays quiet on the crimson background */
+.door-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: var(--white);
+}
+
+.door-secondary h3 {
+  color: var(--white);
+}
+
+.door-secondary p {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.door-secondary .btn-secondary {
+  color: var(--white);
+  border-color: var(--white);
+}
+
+.door-secondary .btn-secondary:hover {
+  background: var(--white);
+  color: var(--crimson);
+}
+
+/* Form ------------------------------------------------------- */
+
+.form-field {
+  margin-bottom: 1.125rem;
+}
+
+.form-field label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  margin-bottom: 0.375rem;
+  color: var(--text-dark);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--text-dark);
+  background: var(--off-white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 0.875rem;
+}
+
+.form-field textarea {
+  resize: vertical;
+}
+
+/* Footer ------------------------------------------------------
+   Kept in deep crimson rather than black: the WCU identity
+   standards ask that red and black not touch directly. */
+
+.footer {
+  background: var(--crimson-deep);
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  font-size: 0.9375rem;
+  padding: 2rem 1.5rem;
+}
+
+.footer-name {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  color: var(--white);
+}
+
+/* Larger screens --------------------------------------------- */
+
+@media (min-width: 720px) {
+  .section {
+    padding: 4.5rem 2rem;
+  }
+
+  .section-featured,
+  .section-close {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .hero-inner {
+    padding: 5rem 2rem 1.5rem;
+  }
+
+  .divider {
+    height: 4rem;
+  }
+
+  .paths {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .close-doors {
+    grid-template-columns: 3fr 2fr;
+    align-items: start;
+  }
+}
