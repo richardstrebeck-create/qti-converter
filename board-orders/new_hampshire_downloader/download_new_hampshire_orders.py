@@ -11,11 +11,22 @@ are downloaded; every other row is recorded in manifest.csv with the reason.
 Note: OPLC keeps documents online for about seven years, so the yearly pages
 start around 2017. Re-running the script later will pick up new years.
 
+Page layout (verified 2026-09-18 against the 2025-06 archived copy of the site;
+the live site refused automated requests): no table. 2017-2023 pages are a
+bulleted list, one <li> per action:
+    <strong>Name, MA, LCMHC, License #605</strong><br>
+    4/21/2017 - On April 21, 2017, the Board ... approved a <a>Settlement Agreement regarding Name, LCMHC</a>
+2024-2025 pages are one paragraph per action:
+    <strong>Name, LCSW, License #2343,</strong> <a>Voluntary Surrender, 10/18/2024</a>
+The license type sits in the bold name segment, so that segment is classified
+first; the link text and file name are only a fallback.
+
 Usage (from this folder):
     py download_new_hampshire_orders.py                 # download LCMHC orders
     py download_new_hampshire_orders.py --list-only     # build manifest.csv only
     py download_new_hampshire_orders.py --include-review
     py download_new_hampshire_orders.py --debug-html
+    py download_new_hampshire_orders.py --from-saved debug   # parse pages saved as root.html, 2017.html ...
 """
 
 from __future__ import annotations
@@ -30,7 +41,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse, unquote
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 BASE_URL = "https://www.oplc.nh.gov"
 ROOT_PATH = "/board-mental-health-practice-actions"
@@ -59,17 +70,25 @@ TEXT_RULES = [
     (re.compile(r"\bLICSW\b|\bLCSW\b|social work", re.I), ("drop", "social work")),
     (re.compile(r"\bL?MFT\b|marriage|family therap", re.I), ("drop", "marriage & family therapy")),
     (re.compile(r"pastoral", re.I), ("drop", "pastoral psychotherapist")),
-    (re.compile(r"unlicensed|non-licensed|no license", re.I), ("drop", "unlicensed / applicant")),
+    (re.compile(r"\bLADC\b|\bMLADC\b|alcohol|drug counsel", re.I), ("drop", "alcohol & drug counseling")),
+    (re.compile(r"unlicensed|non-licensed|no license", re.I), ("drop", "unlicensed")),
+    (re.compile(r"candidate|applicant", re.I), ("drop", "candidate / applicant for licensure")),
 ]
-LICENSE_NO = re.compile(r"(?:license|lic\.?|#|no\.?)\s*#?\s*(\d{3,6})\b", re.I)
-DATE_ANY = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
+LICENSE_NO = re.compile(r"(?:license|lic\.?|#|no\.?)\s*#?\s*([A-Z]{0,3}\d{3,6})\b", re.I)
+DATE_ANY = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b")
+DATE_LONG = re.compile(r"\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\b", re.I)
 DATE_IN_FILE = re.compile(r"(20\d{2})(\d{2})(\d{2})")
 DOC_WORDS = re.compile(
     r"settlement agreement|voluntary surrender|order|agreement|decision|reprimand|"
-    r"suspension|revocation|dismissal|probation|\bLCMHC\b|\bLICSW\b|\bLCSW\b|\bMFT\b|license",
+    r"suspension|revocation|dismissal|probation|\bLCMHC\b|\bLICSW\b|\bLCSW\b|\bMFT\b|\bLMFT\b|"
+    r"\bMA\b|\bMS\b|\bMEd\b|\bM\.Ed\.|\bPhD\b|\bPsyD\b|\bLADC\b|\bMLADC\b|license|unlicensed|candidate|applicant",
     re.I,
 )
+MONTHS = {m: i for i, m in enumerate(
+    ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"], 1)}
 ILLEGAL_FILENAME = re.compile(r'[\\/:*?"<>|]+')
+# Prefixes the Wayback Machine adds to links when a page is saved from web.archive.org.
+WAYBACK_PREFIX = re.compile(r"(?:https?://web\.archive\.org)?/web/\d{4,14}(?:[a-z]{2}_)?/(?=https?://)")
 
 session = requests.Session()
 session.headers.update(HEADERS)
@@ -99,7 +118,7 @@ def year_pages(root_html: str) -> list[str]:
     pages = [f"{ROOT_PATH}-{y}" for y in range(FIRST_YEAR, this_year + 1)]
     soup = BeautifulSoup(root_html, "html.parser")
     for a in soup.find_all("a", href=True):
-        path = urlparse(urljoin(BASE_URL, a["href"])).path.rstrip("/")
+        path = urlparse(urljoin(BASE_URL, WAYBACK_PREFIX.sub("", a["href"]))).path.rstrip("/")
         if path.startswith(ROOT_PATH + "-") and path not in pages:
             pages.append(path)
     return pages
@@ -126,13 +145,17 @@ def nice_case(s: str) -> str:
     return " ".join(w.title() if (w.isupper() or w.islower()) else w for w in s.split())
 
 
+SUFFIXES = {"jr", "jr.", "sr", "sr.", "ii", "iii", "iv"}
+
+
 def split_name(text: str) -> tuple[str, str]:
-    """'Sara DeValk, LCMHC, License #2564, ...' or 'DeValk, Sara ...' -> (last, first)."""
+    """'Sara DeValk, LCMHC, License #2564, ...', 'John E. Briggs, Jr, LCMHC' or 'DeValk, Sara ...' -> (last, first)."""
     t = clean_text(text)
+    t = DATE_LONG.sub(" ", t)
     t = DATE_ANY.sub(" ", t)
     t = LICENSE_NO.sub(" ", t)
     # Cut at the first document/credential word or a separator.
-    t = re.split(r"\s[-|–]\s|\(", t, maxsplit=1)[0]
+    t = re.split(r"\s[-|–—]\s|\(", t, maxsplit=1)[0]
     m = DOC_WORDS.search(t)
     if m:
         t = t[: m.start()]
@@ -140,44 +163,92 @@ def split_name(text: str) -> tuple[str, str]:
     if not t:
         return "", ""
     parts = [p.strip() for p in t.split(",") if p.strip()]
+    suffix = ""
+    if len(parts) >= 2 and parts[1].lower() in SUFFIXES:
+        suffix = parts[1]
+        parts = [parts[0]] + parts[2:]
     if len(parts) >= 2 and len(parts[0].split()) == 1:
         # "DeValk, Sara" form
         return nice_case(parts[0]), nice_case(" ".join(parts[1].split()[:2]))
     tokens = parts[0].split()
+    if tokens and tokens[-1].lower() in SUFFIXES and len(tokens) > 1:
+        suffix = tokens.pop()
     if len(tokens) == 1:
         return nice_case(tokens[0]), ""
     tokens = tokens[:4]
-    return nice_case(tokens[-1]), nice_case(" ".join(tokens[:-1]))
+    last = nice_case(tokens[-1]) + (f" {suffix.rstrip('.')}" if suffix else "")
+    return last, nice_case(" ".join(tokens[:-1]))
+
+
+def name_segment(container, a) -> str:
+    """The bold name at the start of the entry, else the text before the first <br>, else the text before the link."""
+    strong = next((t for t in container.find_all("strong") if clean_text(t.get_text())), None)
+    if strong is not None:
+        return clean_text(strong.get_text(" ", strip=True))
+    parts = []
+    for node in container.descendants:
+        if isinstance(node, Tag) and (node.name == "br" or node is a):
+            break
+        if isinstance(node, NavigableString) and a not in node.parents:
+            parts.append(str(node))
+    return clean_text(" ".join(parts))
+
+
+def find_date(*texts: str) -> str:
+    """First date in the texts as YYYY-MM-DD: 'October 20, 2017', '10/09/2024', '6-28-2024', '1/15/21'."""
+    for t in texts:
+        m = DATE_LONG.search(t or "")
+        if m:
+            return f"{m.group(3)}-{MONTHS[m.group(1).lower()]:02d}-{int(m.group(2)):02d}"
+    for t in texts:
+        m = DATE_ANY.search(t or "")
+        if m:
+            y = m.group(3)
+            y = f"20{y}" if len(y) == 2 else y
+            return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    return ""
 
 
 def parse_year_page(label: str, html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
     entries = []
     for a in soup.find_all("a", href=True):
-        path = urlparse(urljoin(BASE_URL, a["href"])).path
+        href = WAYBACK_PREFIX.sub("", a["href"].strip())
+        path = urlparse(urljoin(BASE_URL, href)).path
         if not path.lower().endswith(".pdf"):
             continue
-        url = urljoin(BASE_URL, a["href"])
+        url = urljoin(BASE_URL, href)
         container = row_container(a)
         row_text = clean_text(container.get_text(" ", strip=True))
         link_text = clean_text(a.get_text(" ", strip=True))
         basename = unquote(Path(path).name)
-        category, note = classify(row_text + " " + link_text + " " + basename)
+        # 2025 layout: the whole entry is the link text ("Name, LCSW, License #324, Order of Dismissal, 04/18/2025").
+        name_text = name_segment(container, a) or link_text
+
+        # The license type printed next to the name settles the profession; the
+        # link text and file name are only consulted when the name segment is silent.
+        category, note = classify(name_text) if name_text else ("review", "")
+        if category == "review":
+            category, note = classify(row_text + " " + link_text + " " + basename)
 
         last = first = ""
         if container.name == "tr":
             cells = container.find_all(["td", "th"])
             if cells:
                 last, first = split_name(cells[0].get_text(" ", strip=True))
+        if not last and name_text:
+            last, first = split_name(name_text)
         if not last:
             last, first = split_name(row_text.replace(link_text, " "))
         if not last:
-            last, first = split_name(link_text)
+            m = re.search(r"regarding\s+(.+)$", link_text, re.I)
+            last, first = split_name(m.group(1) if m else link_text)
 
-        lic = LICENSE_NO.search(row_text)
-        license_no = lic.group(1) if lic else ""
-        d = DATE_ANY.search(row_text)
-        action_date = f"{d.group(3)}-{int(d.group(1)):02d}-{int(d.group(2)):02d}" if d else ""
+        lic = LICENSE_NO.search(name_text) or LICENSE_NO.search(row_text)
+        license_no = lic.group(1).upper() if lic else ""
+        # Date: the link label ("Voluntary Surrender, 10/18/2024") or the sentence
+        # ("On October 20, 2017, the Board ...") or the leading short date, else the file name.
+        action_date = find_date(link_text, row_text.replace(name_text, " "))
         if not action_date:
             f = DATE_IN_FILE.search(basename)
             if f:
@@ -196,6 +267,7 @@ def parse_year_page(label: str, html: str) -> list[dict]:
                 "last_name": last,
                 "first_name": first,
                 "license_no": license_no,
+                "license_type": name_text,
                 "action_date": action_date,
                 "category": category,
                 "category_note": note,
@@ -226,6 +298,7 @@ def assign_filenames(entries: list[dict]) -> None:
 MANIFEST_FIELDS = [
     "index_page", "index_text", "doc_label", "last_name", "first_name", "license_no",
     "action_date", "category", "category_note", "flags", "filename", "official_url",
+    "license_type",
 ]
 
 
@@ -272,18 +345,40 @@ def main(argv=None) -> int:
     ap.add_argument("--list-only", action="store_true")
     ap.add_argument("--include-review", action="store_true")
     ap.add_argument("--debug-html", action="store_true")
+    ap.add_argument("--from-saved", metavar="DIR", help="parse pages saved as root.html, 2017.html ... in DIR instead of fetching")
     args = ap.parse_args(argv)
 
     print(f"New Hampshire Board of Mental Health Practice actions -> {STATE_FOLDER}")
-    root_html = fetch(urljoin(BASE_URL, ROOT_PATH))
-    pages = year_pages(root_html)
-    page_htmls = [(ROOT_PATH, root_html)]
-    for path in pages:
-        time.sleep(PAUSE_SECONDS)
+    if args.from_saved:
+        folder = Path(args.from_saved)
+        if not folder.is_absolute():
+            folder = HERE / folder
+        page_htmls = []
+        for f in sorted(folder.glob("*.htm*")):
+            stem = f.stem.lower()
+            path = ROOT_PATH if not stem.isdigit() else f"{ROOT_PATH}-{stem}"
+            page_htmls.append((path, f.read_text(encoding="utf-8", errors="replace")))
+        if not page_htmls:
+            raise SystemExit(f"No .html files found in {folder}")
+        print(f"Reading {len(page_htmls)} saved page(s) from {folder}")
+    else:
         try:
-            page_htmls.append((path, fetch(urljoin(BASE_URL, path))))
+            root_html = fetch(urljoin(BASE_URL, ROOT_PATH))
         except Exception as exc:  # noqa: BLE001
-            print(f"  WARNING could not read {path}: {exc}")
+            raise SystemExit(
+                f"Could not read the root page: {exc}\n"
+                "If the page opens in your browser, the site is refusing automated requests.\n"
+                "Save the root page and each year page as root.html, 2017.html, 2018.html ... into\n"
+                f"{DEBUG_DIR} and re-run with  --from-saved debug"
+            ) from exc
+        pages = year_pages(root_html)
+        page_htmls = [(ROOT_PATH, root_html)]
+        for path in pages:
+            time.sleep(PAUSE_SECONDS)
+            try:
+                page_htmls.append((path, fetch(urljoin(BASE_URL, path))))
+            except Exception as exc:  # noqa: BLE001
+                print(f"  WARNING could not read {path}: {exc}")
 
     all_entries: list[dict] = []
     for path, html in page_htmls:
@@ -291,7 +386,7 @@ def main(argv=None) -> int:
         found = parse_year_page(label, html)
         print(f"  {label:<6} {len(found):>4} PDF links")
         all_entries.extend(found)
-        if args.debug_html or (not found and path != ROOT_PATH):
+        if args.debug_html or (not found and path != ROOT_PATH and not args.from_saved):
             DEBUG_DIR.mkdir(exist_ok=True)
             (DEBUG_DIR / f"{label}.html").write_text(html, encoding="utf-8")
 

@@ -42,10 +42,36 @@ VOLUME AND RETENTION
 To check the list without downloading any orders:
     py download_new_hampshire_orders.py --list-only
 
-FIRST RUN: THINGS TO CHECK
-    Written without access to the live site. Run --list-only first and open
-    manifest.csv: confirm counselor rows are LCMHC and names parsed cleanly.
-    If nothing is found, the fetched pages are saved under downloader\debug\.
+VERIFIED 2026-09-18 (against the 2025-06 archived copy of the site)
+    The live site sits behind Akamai and refused every automated request from
+    the verification session (HTTP 403 "Access Denied"), so the parser was
+    verified against the Wayback Machine copy of the root page and the 2017
+    to 2025 year pages instead. What the pages really look like:
+    - no table. 2017-2023: a bulleted list, one item per action, the name and
+      license type in bold ("Steven Durost, MA, LCMHC, License #605"), then
+      "4/21/2017 - On April 21, 2017, the Board ... approved a <link>";
+    - 2024: one paragraph per action, bold name segment then a link whose
+      label is "Voluntary Surrender, 10/18/2024";
+    - 2025: the whole entry is the link label
+      ("Samuel Rosario, LCSW, License # 324, Order of Dismissal, 04/18/2025").
+    The license type in the name segment decides the category (LCMHC kept;
+    LICSW / LCSW, MFT, pastoral, unlicensed and candidates dropped).
+    manifest.csv gained one column at the end: license_type (the raw name
+    segment, so the decision can be checked by eye).
+    June 2025 copy: 39 documents 2017-2025, 18 LCMHC (13 people), 21 dropped.
+    No "review" rows.
+
+    First run on your machine:
+    1. py download_new_hampshire_orders.py --list-only and open manifest.csv.
+    2. If the run stops with "Could not read the root page ... 403", the site
+       is blocking the script but not your browser. Save the root page and
+       each year page as "Webpage, HTML only" into downloader\debug\ as
+       root.html, 2017.html, 2018.html ... then run
+           py download_new_hampshire_orders.py --list-only --from-saved debug
+       If the PDFs are blocked as well, download the 18 LCMHC files by hand
+       using the official_url and filename columns of the manifest.
+    3. PDF text layer: could not be checked (downloads blocked). These are
+       recent Word-generated documents, so a text layer is likely.
 
 AFTER DOWNLOADING
     Run make_text_sidecars.py --states "New Hampshire" from the Complaint
