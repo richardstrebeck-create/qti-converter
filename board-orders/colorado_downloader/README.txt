@@ -50,8 +50,8 @@ HOW TO RUN IT
    (and  py -m pip install pymupdf  if you want --text-check).
 2. Double-click Run_Colorado_Downloader.cmd.
 3. Leave the window open while it works. The 774 counselor documents add
-   up to about 1.5 GB (the older ones are big scans), so the first run
-   takes 40 to 90 minutes depending on the connection. Later runs only
+   up to about 1 GB (the older ones are big scans), so the first run
+   takes 60 to 90 minutes depending on the connection. Later runs only
    fetch what is new.
 
 What happens:
@@ -134,9 +134,11 @@ VERIFIED 2026-09-18 (live, from a cloud session; first full run the same day)
     roster (proper case) when the license number is on it, otherwise from
     DDMS (all caps, title-cased by the script).
 
-    The older documents are IMAGE SCANS: see the --text-check counts in
-    COLORADO_VERIFICATION_2026-09-18.md. Run Foxit OCR on the image-only
-    files BEFORE make_text_sidecars.py.
+    The older documents are IMAGE SCANS. --text-check on the 774 files of
+    the first run: 196 have a text layer, 578 are image only (everything
+    through 2018, most of 2019, half of 2020, and 31 files from 2021 on).
+    Run Foxit OCR on the image-only files BEFORE make_text_sidecars.py.
+    The first run downloaded all 774 with 0 failures (976 MB).
 
     First run on your machine:
     1. py download_colorado_orders.py --list-only and open manifest.csv.

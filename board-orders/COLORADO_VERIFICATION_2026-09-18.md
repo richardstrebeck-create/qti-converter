@@ -23,8 +23,8 @@ counselor-board document in one query with plain download links.
 
 Rating: **EASY** (moved up from Tier 2 MODERATE). One roster download for
 the index, one DDMS query for the document list, then plain PDF downloads.
-The cost is OCR: the documents before about 2019 are image scans, and the
-full set is about 1.5 GB.
+The cost is OCR: 578 of the 774 documents are image scans (everything
+before 2019 and half of 2019 to 2020), and the full set is 976 MB.
 
 ## 1. Board page and enforcement pages
 
@@ -243,7 +243,22 @@ roster shows no action). 15 counselor documents have no license number in
 DDMS and are named with the barcode instead; 11 have no effective date and
 are named "undated". 28 files carry a " (2)" suffix (same person, same date).
 
-Full run: RUN_RESULTS_PLACEHOLDER
+Full run (2026-09-18, about 75 minutes at one file every 1.5 s plus transfer):
+
+| Measure | Value |
+|---|---|
+| Counselor documents downloaded | 774 of 774 (0 failed, 0 skipped) |
+| People | 612 license numbers or barcodes |
+| Effective dates | 1992-08-30 to 2026-06-17 (11 undated) |
+| Size | 976 MB; largest file 19.1 MB ("Fay, Jeffrey C LPC.0015983 2021-03-26.pdf"); nothing near the 95 MB limit |
+| `--text-check` (PyMuPDF, 200-character threshold) | 196 text-native, 578 image only, 0 unreadable |
+| Scans by period | every file through 2018 except a handful, 48 of 61 in 2019, 19 of 54 in 2020, then 5, 2, 9, 10, 4, 1 a year from 2021 to 2026, plus the 11 undated |
+
+So the OCR job is 578 files, essentially the "HPPP-CO PUBLIC DISCIPLINARY
+ACTION" batch scans; the "BOARD/PROGRAM ACTION DOCUMENTS" files from 2020
+on are mostly text-native. The PDFs, `manifest.csv` and `download_log.csv`
+are on branch `board-orders-data` under `Colorado\` (see `README_DATA.md`
+there). Candidates (92 LPCC documents) were listed but not downloaded.
 
 ## 7. What the user must still do
 
