@@ -58,7 +58,7 @@ VERIFIED 2026-09-18 (against the 2025-06 archived copy of the site)
     LICSW / LCSW, MFT, pastoral, unlicensed and candidates dropped).
     manifest.csv gained one column at the end: license_type (the raw name
     segment, so the decision can be checked by eye).
-    June 2025 copy: 39 documents 2017-2025, 18 LCMHC (13 people), 21 dropped.
+    June 2025 copy: 39 documents 2017-2025, 18 LCMHC documents (16 people), 21 dropped.
     No "review" rows.
 
     First run on your machine:

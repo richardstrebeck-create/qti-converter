@@ -37,21 +37,36 @@ character count read, and the target filename for kept ones.
 To list the folder without downloading anything:
     py download_vermont_orders.py --list-only
 
-FIRST RUN: THINGS TO CHECK
-    Written without access to the live site. Two things are unverified:
-    1. Folder listing. If the run says it could not list the folder, open
-       https://outside.vermont.gov/dept/sos/office_professional_regulation/conduct_decisions/allied_mental_health/
-       in a browser. If the folder has moved, update FOLDER at the top of the
-       script; if only the listing page differs, any page fetched is saved
-       under downloader\debug\ for comparison.
-    2. Classification words. Open a few "drop" and "review" rows in
-       manifest.csv and confirm they are not counselors. Adjust COUNSELOR or
-       OTHER_RULES near the top of the script if Vermont uses other wording.
-
-    A cross-check is available: OPR's monthly discipline reports
-    (https://sos.vermont.gov/opr/complaints-conduct-discipline/monthly-discipline-reports/)
-    list every LCMHC action by name and date. Spot-check a few against the
-    manifest.
+VERIFIED LIVE 2026-09-18
+    1. Folder listing works. The SharePoint REST API refuses anonymous callers
+       (401/404), so the script reads the folder's "All Documents" view page,
+       which carries the file list as embedded JSON, 30 files per page, and
+       follows the "next page" link. On 2026-09-18 the folder held 138 PDFs
+       (99 of them bulk-uploaded on 2025-03-13; the rest added 2025-03 to
+       2026-09). Dockets run from about 2000 (docket aomh010300) to 2026-134.
+    2. File names do NOT follow one pattern. Three shapes were found:
+           2025-105_Ashley_MacDonald_Signed_Order.pdf   docket, First Last, type
+           2025-38_gould_adam_signed_order.pdf          docket, Last First, type
+           albergate-scott-docket-2018-20.pdf           Last First, docket (older)
+       The first two cannot be told apart from the name alone, so the
+       manifest says "name order assumed First Last" for them, and pass 2
+       reads the "In re:" line of the PDF to correct the order.
+    3. EVERY sampled PDF is a scan with no text layer (8 samples: 2007-era,
+       2018, 2019, 2023, 2025 and 2026 orders, 85 KB to 3 MB). Expect pass 2
+       to send all 138 files to review\ on the first run. The workflow is
+       therefore: run the .cmd (downloads all 138), Foxit-OCR review\, then
+       py download_vermont_orders.py --reclassify. The classification words
+       could not be checked against real text for this reason; open a few
+       "drop" and "review" rows after OCR and adjust COUNSELOR / OTHER_RULES
+       if Vermont's wording differs.
+    4. Cross-check that does not need OCR: OPR's monthly discipline reports
+       (https://sos.vermont.gov/opr/complaints-conduct-discipline/monthly-discipline-reports/,
+       92 text-native PDFs, 2019-01 to 2026-08, one line per action:
+       "Last, First, City, ST / LCMHC / date: action") name every LCMHC
+       action since 2019. They can settle both the profession and the name
+       order for 2019+ dockets; older dockets need the OCR pass.
+    manifest.csv gained two columns at the end: modified (SharePoint date)
+    and dockets_all (every docket number in the file name).
 
 AFTER DOWNLOADING
     Run make_text_sidecars.py --states Vermont from the Complaint Scraper
