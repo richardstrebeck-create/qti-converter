@@ -103,7 +103,7 @@ PIECE_GAP = 18.0           # a horizontal gap wider than this splits a row into 
 COLUMN_TOLERANCE = 2.0     # a word starting this close to the report's profession column starts a new piece
 FOOTNOTE = re.compile(r"^\d\s+[A-Z][a-z]+\s")   # "1 Act 6 and Act 91, emergency legislation ..." at a page foot
 ENTRY_GAP = 19.5           # a vertical gap wider than this starts a new entry (lines are ~14-15 apart)
-BULLET_CHARS = re.compile(r"[-•▪●]")
+BULLET_CHARS = re.compile(r"[\uE000-\uF8FF•▪●\uF0B7]")
 
 MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August",
           "September", "October", "November", "December")
