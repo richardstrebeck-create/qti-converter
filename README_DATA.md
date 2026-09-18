@@ -38,6 +38,7 @@ present are skipped, so re-running only fetches what is new).
 | Kansas | 76 | 60 | 0 (see OCR note) | 503 (never fetched) | 2 | 45 MB |
 | New Hampshire | 18 | 16 | 0 (see OCR note) | 21 (never fetched) | 0 | 15 MB |
 | Oklahoma | 39 | 38 | 0 (no review step; see OCR note) | 31 (LMFT and LBP, never fetched) | 0 | 9 MB |
+| Texas | 171 (172 orders; one file holds two) | 166 | 1 (nine unbookmarked packet pages, FY22 Q2) | 119 (LMFT, PSY, SW; never extracted) | 0 | 436 MB |
 
 Total pushed: about 277 MB. No file exceeded the 95 MB single-file limit,
 so nothing was skipped for size.
@@ -160,3 +161,41 @@ working branch.
   were not fetched.
 - Text layer: 7 of 39 are text-native, 32 are image scans. Run Foxit OCR
   on the folder before make_text_sidecars.py.
+
+## Texas (171 counselor documents in manifest.csv)
+
+Source: the Texas Behavioral Health Executive Council's quarterly "Public
+Meeting Materials" packets, linked from
+https://bhec.texas.gov/tbhec/important-dates/past-council-meeting-dates/ .
+Each packet's item "Agreed Orders and Dismissals for the fiscal-quarter" is
+the signed agreed orders themselves, sorted by profession. Downloaded
+2026-09-18 with `board-orders/texas_downloader/download_texas_orders.py`
+from the working branch (17 packets, October 2021 to June 2026; the packets
+themselves, about 950 MB, are not kept).
+
+- `Texas/` holds 171 order PDFs (436 MB; the largest is 7.3 MB) for
+  Licensed Professional Counselors and LPC Associates, named
+  "Lastname, Firstname <fiscal quarter> <Council meeting date>.pdf", for
+  example "Joslin, Gene FY25Q4 2025-10-14.pdf". The quarter is the one the
+  order was reported in (Texas FY runs September to August); the order's own
+  signature date is inside the scan. Orders run from FY21 Q4 (June to
+  August 2021) to FY26 Q3 (March to May 2026), 3 to 26 per quarter.
+  "Pruitt, Jennifer + Ripstra, Leeann FY23Q4 2023-10-24.pdf" holds two
+  orders because the packet's bookmark for the second had no page number;
+  split it by hand after OCR.
+- `Texas/review/` holds one file: the nine unbookmarked pages of the May
+  2022 packet (FY22 Q2), which start with an LPC order (Cynthia Kay) and
+  continue with MFT and PSY orders. Keep the "PROFESSIONAL COUNSELORS"
+  pages as "Kay, Cynthia FY22Q2 2022-05-18.pdf" and drop the rest.
+- `Texas/downloader/manifest.csv` has one row per order found in the
+  packets (171 counselor, 119 other professions not extracted, 1 review)
+  with the packet URL, the zip entry or page range it came from, and, for
+  the 105 orders whose name matched BHEC's current-licensee list, the
+  license number and rank (3 are LPC Associates). `download_log.csv`
+  records the 172 files written (0 failures).
+- Text layer: 10 of 171 are text-native, 161 are image scans. Run Foxit
+  OCR on the folder before make_text_sidecars.py.
+- Not covered: orders before June 2021, default and SOAH orders (only
+  agreed orders are in the packets), and anything after the June 2026
+  packet. The BHEC licensee lookup (datamart) is reCAPTCHA-protected and
+  could not be used.
