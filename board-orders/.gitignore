@@ -1,0 +1,10 @@
+# Verification and run artefacts that must never be committed
+*.pdf
+*.docx
+*.xlsx
+**/debug/
+**/__pycache__/
+**/download_log.csv
+**/_all_allied_mental_health/
+**/_all_behavioral_health/
+**/review/

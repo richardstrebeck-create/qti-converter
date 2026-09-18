@@ -43,17 +43,37 @@ What happens:
 To check the list without downloading any orders:
     py download_kansas_orders.py --list-only
 
-FIRST RUN: THINGS TO CHECK
-    This script was written without being able to open the live site, so on
-    the first run:
-    1. Run --list-only and open manifest.csv.
-    2. Confirm the "counselor" rows are really LPC/LCPC and that last_name /
-       first_name look right (the name column is parsed from the page text;
-       cities or credentials may leak into it if the layout differs).
-    3. If the run reports "No PDF links were found", the fetched pages are
-       saved under downloader\debug\ - open one and compare with the site.
-    4. If the board uses a profession code other than PC for counselors,
-       add it to CODE_MAP near the top of the script.
+VERIFIED 2026-09-18 (against the 2026-08-14 archived copy of the site)
+    The live site sits behind Akamai and refused every automated request from
+    the verification session (HTTP 403 "Access Denied"), so the parser was
+    verified against the Wayback Machine copy of all eight pages instead.
+    What the pages really look like, and what the script now does:
+    - one table per letter page, four columns: "Name - LICENSE NUMBER",
+      date(s), city, "Document type <case number link>". A licensee with
+      several orders has several dates and links in one row;
+    - links go to /home/showpublisheddocument/<id>/<ticks>, not to a .pdf
+      file name; they still return the PDF;
+    - the license label next to the name decides the profession (LPC and
+      LCPC are counselors, including dual licensees such as "LCAC 606,
+      LPC 3068"); the case-number code is the fallback (PC and LC are the
+      counselor codes; 19 codes are decoded in CODE_MAP);
+    - manifest.csv gained three columns at the end: license, action_date, city.
+    August 2026 copy: 583 documents, 78 counselor, 503 drop, 2 review
+    (two cease-and-desist orders against unlicensed persons).
+
+    First run on your machine:
+    1. py download_kansas_orders.py --list-only and open manifest.csv. Expect
+       about 80 counselor rows. If the counts differ a lot, the site changed.
+    2. If the run stops with "Could not read ... 403", the site is blocking
+       the script but not your browser. Open each page in the browser
+       (root page and A-C ... W-Z), save each as "Webpage, HTML only" into
+       downloader\debug\ as root.html, a-c.html, d-f.html, g-j.html, k-m.html,
+       n-q.html, r-v.html, w-z.html, then run
+           py download_kansas_orders.py --list-only --from-saved debug
+       The PDF downloads may still be blocked; if so, they need the browser too.
+    3. PDF text layer: could not be checked (downloads blocked). Older
+       orders (1990s-2000s) are likely scans; run make_text_sidecars and OCR
+       whatever comes back empty.
 
 AFTER DOWNLOADING
     Run make_text_sidecars.py --states Kansas from the Complaint Scraper

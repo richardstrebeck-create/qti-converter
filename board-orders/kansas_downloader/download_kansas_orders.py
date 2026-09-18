@@ -8,6 +8,18 @@ Every entry found on the index is written to manifest.csv with a category
 (counselor / drop / review); only "counselor" entries are downloaded unless
 you pass --include-review or --include-all.
 
+Page layout (verified 2026-09-18 against the 2026-08-14 copy of the site):
+one HTML table per letter page, four columns per row:
+
+    Name - LICENSE NUMBER  |  date(s)  |  city  |  document type + case-number link
+
+The case-number link points at /home/showpublisheddocument/<id>/<ticks>
+(no .pdf extension) and returns the PDF. A licensee with several orders has
+several dates and several links in the same row. Case numbers carry a
+profession code (22-PC-0163: PC = professional counselor, LC = clinical
+professional counselor); 1980s-1990s cases (95-0588) have no code, so the
+license label in the name column is used first and the code second.
+
 Built from the Maryland downloader's behaviour: sequential downloads with a
 polite pause, three retries, a real-PDF check, skip-if-present, and a
 download_log.csv of every outcome.
@@ -18,6 +30,9 @@ Usage (from this folder):
     py download_kansas_orders.py --include-review
     py download_kansas_orders.py --include-all   # every profession (not needed for the LPC dataset)
     py download_kansas_orders.py --debug-html    # also save the fetched index pages to downloader\debug\
+    py download_kansas_orders.py --from-saved debug   # parse pages saved earlier (root.html, a-c.html, ...)
+                                                      # instead of fetching them; use this if the site
+                                                      # blocks the script but opens in a browser
 """
 
 from __future__ import annotations
@@ -31,7 +46,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse, unquote
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 # --------------------------------------------------------------------------- #
 # Configuration
@@ -39,8 +54,8 @@ from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.ksbsrb.ks.gov"
 INDEX_ROOT = "/complaints/disciplinary-actions"
-# Letter pages seen in the search index (2026-09). The script also discovers
-# any other sub-page linked from the root page, so a renamed page is not lost.
+# Letter pages confirmed 2026-09. The script also discovers any other sub-page
+# linked from the root page, so a renamed page is not lost.
 KNOWN_SUBPAGES = ["a-c", "d-f", "g-j", "k-m", "n-q", "r-v", "w-z"]
 
 HERE = Path(__file__).resolve().parent            # ...\state_data\Kansas\downloader
@@ -58,48 +73,82 @@ HEADERS = {
         "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
     ),
     "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
 }
 
-# Case numbers look like 22-PC-0163 (year, profession code, sequence).
-# Very old ones look like 96-0608 (no profession code).
-CASE_WITH_CODE = re.compile(r"\b(\d{2})-([A-Za-z]{2,4})-(\d{3,5})\b")
-CASE_LEGACY = re.compile(r"\b(\d{2})-(\d{4})\b")
+# Case numbers look like 22-PC-0163 (year, profession code, sequence); a few are
+# 22-MS-012 or 96-0661A. Very old ones look like 96-0608 (no profession code).
+CASE_WITH_CODE = re.compile(r"\b(\d{2})-([A-Za-z]{2,4})-(\d{2,5}[A-Za-z]?)\b")
+CASE_LEGACY = re.compile(r"\b(\d{2})-(\d{4}[A-Za-z]?)\b")
 
-# Profession codes embedded in Kansas case numbers. PC is the one we want.
-# Anything not listed here is sent to "review" rather than guessed.
+# Profession codes embedded in Kansas case numbers, decoded from the license
+# labels that accompany them on the index (2026-08 copy). PC and LC are the
+# counselor codes. Anything not listed here is sent to "review" rather than guessed.
 CODE_MAP = {
-    "PC": ("counselor", ""),
+    "PC": ("counselor", "LPC (code PC)"),
+    "LC": ("counselor", "LCPC (code LC)"),
     "SW": ("drop", "social work"),
-    "BS": ("drop", "social work (baccalaureate/BSRB social work code)"),
-    "MS": ("drop", "social work (master's)"),
-    "CS": ("drop", "social work (clinical)"),
-    "MF": ("drop", "marriage & family therapy"),
+    "BS": ("drop", "social work (LBSW)"),
+    "MS": ("drop", "social work (LMSW)"),
+    "CS": ("drop", "social work (LSCSW)"),
+    "AS": ("drop", "social work (LASW)"),
+    "MF": ("drop", "marriage & family therapy (LMFT)"),
+    "CT": ("drop", "marriage & family therapy (LCMFT)"),
     "MFT": ("drop", "marriage & family therapy"),
-    "AC": ("drop", "addiction counseling"),
+    "AC": ("drop", "addiction counseling (LAC)"),
+    "CA": ("drop", "addiction counseling (LCAC)"),
+    "MA": ("drop", "addiction counseling (LMAC)"),
+    "RD": ("drop", "addiction counseling (RAODAC)"),
+    "LP": ("drop", "psychology (LP)"),
     "PS": ("drop", "psychology"),
     "PSY": ("drop", "psychology"),
-    "MP": ("drop", "master's level psychology"),
-    "MLP": ("drop", "master's level psychology"),
-    "BA": ("drop", "behavior analysis"),
+    "MP": ("drop", "psychology (LMLP)"),
+    "MLP": ("drop", "psychology (LMLP)"),
+    "CP": ("drop", "psychology (LCP)"),
+    "BA": ("drop", "behavior analysis (LBA)"),
+    "APP": ("review", "applicant (code APP)"),
+    "NL": ("review", "no license / unlicensed practice (code NL)"),
 }
 
-# Words in the entry text that settle the profession when the code does not.
+# License labels as they appear in the name column ("Abbey, Leslie - LSCSW 1264").
+LABEL_MAP = {
+    "LPC": ("counselor", "LPC"),
+    "LCPC": ("counselor", "LCPC"),
+    "T-LPC": ("counselor", "LPC (temporary)"),
+    "LMSW": ("drop", "social work (LMSW)"),
+    "LSCSW": ("drop", "social work (LSCSW)"),
+    "LBSW": ("drop", "social work (LBSW)"),
+    "LASW": ("drop", "social work (LASW)"),
+    "LMFT": ("drop", "marriage & family therapy (LMFT)"),
+    "LCMFT": ("drop", "marriage & family therapy (LCMFT)"),
+    "T-LMFT": ("drop", "marriage & family therapy (temporary)"),
+    "LAC": ("drop", "addiction counseling (LAC)"),
+    "LCAC": ("drop", "addiction counseling (LCAC)"),
+    "LMAC": ("drop", "addiction counseling (LMAC)"),
+    "RAODAC": ("drop", "addiction counseling (RAODAC)"),
+    "LP": ("drop", "psychology (LP)"),
+    "LMLP": ("drop", "psychology (LMLP)"),
+    "LCP": ("drop", "psychology (LCP)"),
+    "LBA": ("drop", "behavior analysis (LBA)"),
+}
+LABEL_PATTERN = re.compile(r"\b(T-LPC|T-LMFT|LCPC|LPC|LMSW|LSCSW|LBSW|LASW|LCMFT|LMFT|LCAC|LMAC|LAC|RAODAC|LMLP|LCP|LP|LBA)\b")
+
+# Words in the entry text that settle the profession when neither label nor code does.
 TEXT_RULES = [
-    (re.compile(r"professional counsel|\bLPC\b|\bLCPC\b", re.I), ("counselor", "")),
-    (re.compile(r"social work|\bLSCSW\b|\bLMSW\b|\bLBSW\b", re.I), ("drop", "social work")),
-    (re.compile(r"marriage|family therap|\bLMFT\b|\bLCMFT\b", re.I), ("drop", "marriage & family therapy")),
-    (re.compile(r"addiction|alcohol|drug|\bLAC\b|\bLCAC\b", re.I), ("drop", "addiction counseling")),
-    (re.compile(r"psycholog|\bLP\b|\bLMLP\b|\bLCP\b", re.I), ("drop", "psychology")),
-    (re.compile(r"behavior analy|\bLBA\b|\bBCBA\b", re.I), ("drop", "behavior analysis")),
+    (re.compile(r"professional counsel", re.I), ("counselor", "text: professional counselor")),
+    (re.compile(r"social work", re.I), ("drop", "social work")),
+    (re.compile(r"marriage|family therap", re.I), ("drop", "marriage & family therapy")),
+    (re.compile(r"addiction|alcohol|drug", re.I), ("drop", "addiction counseling")),
+    (re.compile(r"psycholog", re.I), ("drop", "psychology")),
+    (re.compile(r"behavior analy|\bBCBA\b", re.I), ("drop", "behavior analysis")),
+    (re.compile(r"unlicensed|no license", re.I), ("review", "unlicensed / no license")),
+    (re.compile(r"applicant", re.I), ("review", "applicant")),
 ]
 
-DOC_WORDS = re.compile(
-    r"consent agreement|order|agreement|summary proceeding|revocation|suspension|"
-    r"reprimand|censure|probation|surrender|stipulation|final|decision|\.pdf",
-    re.I,
-)
-DATE_PATTERN = re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b|\b[A-Z][a-z]+ \d{1,2}, \d{4}\b")
+DATE_PATTERN = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 ILLEGAL_FILENAME = re.compile(r'[\\/:*?"<>|]+')
+# Prefixes the Wayback Machine adds to links when a page is saved from web.archive.org.
+WAYBACK_PREFIX = re.compile(r"(?:https?://web\.archive\.org)?/web/\d{4,14}(?:[a-z]{2}_)?/(?=https?://)")
 
 session = requests.Session()
 session.headers.update(HEADERS)
@@ -129,7 +178,8 @@ def discover_index_pages(root_html: str) -> list[str]:
     pages = [INDEX_ROOT + "/" + s for s in KNOWN_SUBPAGES]
     soup = BeautifulSoup(root_html, "html.parser")
     for a in soup.find_all("a", href=True):
-        path = urlparse(urljoin(BASE_URL, a["href"])).path.rstrip("/").lower()
+        href = WAYBACK_PREFIX.sub("", a["href"])
+        path = urlparse(urljoin(BASE_URL, href)).path.rstrip("/").lower()
         if path.startswith(INDEX_ROOT + "/") and path != INDEX_ROOT and path not in pages:
             if not path.lower().endswith(".pdf"):
                 pages.append(path)
@@ -140,18 +190,8 @@ def discover_index_pages(root_html: str) -> list[str]:
 # Parsing one index page into entries
 # --------------------------------------------------------------------------- #
 
-def row_container(a):
-    """Nearest ancestor that represents one index entry (table row, list item, paragraph)."""
-    for parent in a.parents:
-        if parent.name in ("tr", "li", "p"):
-            return parent
-        if parent.name in ("table", "ul", "ol", "body"):
-            break
-    return a.parent
-
-
 def clean_text(s: str) -> str:
-    return re.sub(r"\s+", " ", s or "").strip()
+    return re.sub(r"\s+", " ", s or "").replace(" ,", ",").strip()
 
 
 def extract_case(*texts: str) -> tuple[str, str]:
@@ -167,23 +207,29 @@ def extract_case(*texts: str) -> tuple[str, str]:
     return "", ""
 
 
-def classify(code: str, text: str) -> tuple[str, str]:
-    """Decide counselor / drop / review from the case code, then the entry text."""
+def classify(labels: list[str], code: str, text: str) -> tuple[str, str]:
+    """
+    Decide counselor / drop / review. The license label(s) printed next to the
+    name settle it first (a dual licensee holding LPC/LCPC counts as a counselor),
+    then the profession code in the case number, then words in the row text.
+    """
+    verdicts = [LABEL_MAP[l] for l in labels if l in LABEL_MAP]
+    if verdicts:
+        counselor = [v for v in verdicts if v[0] == "counselor"]
+        others = [v for v in verdicts if v[0] != "counselor"]
+        if counselor and others:
+            return ("counselor", "dual license: " + ", ".join(v[1] for v in verdicts))
+        if counselor:
+            return counselor[0]
+        return ("drop", "; ".join(dict.fromkeys(v[1] for v in others)))
     if code in CODE_MAP:
         return CODE_MAP[code]
     for pattern, verdict in TEXT_RULES:
         if pattern.search(text):
             return verdict
-    return ("review", "no profession code or keyword found")
-
-
-PROFESSION_WORDS = re.compile(
-    r"\b(licensed|specialist|clinical|professional|master'?s?( level)?|temporary|provisional|"
-    r"baccalaureate|addiction|alcohol|drug|marriage|family|social|behavior|behavioral|"
-    r"counselor|counseling|worker|therapist|therapy|psychologist|psychology|analyst|"
-    r"LPC|LCPC|LMFT|LCMFT|LSCSW|LMSW|LBSW|LAC|LCAC|LP|LMLP|LCP|LBA|BCBA|and)\b",
-    re.I,
-)
+    if code:
+        return ("review", f"unknown profession code {code}")
+    return ("review", "no license label, code or keyword found")
 
 
 def nice_case(s: str) -> str:
@@ -191,90 +237,191 @@ def nice_case(s: str) -> str:
     return " ".join(w.title() if (w.isupper() or w.islower()) else w for w in s.split())
 
 
-def split_name(text: str) -> tuple[str, str, str]:
-    """
-    Pull (last, first, raw) out of the entry text. Handles "Last, First ..." and
-    "First Last ..." after stripping document words, dates, case numbers and
-    profession phrases.
-    """
-    raw = clean_text(text)
-    scrub = CASE_WITH_CODE.sub(" ", raw)
-    scrub = CASE_LEGACY.sub(" ", scrub)
-    scrub = DATE_PATTERN.sub(" ", scrub)
-    # Cut at the first document-type word, a pipe, a dash separator, or a parenthesis.
-    cut = re.split(r"\s[-|–]\s|\(|\bPDF\b", scrub, maxsplit=1)[0]
-    m = DOC_WORDS.search(cut)
-    if m:
-        cut = cut[: m.start()]
-    cut = PROFESSION_WORDS.sub(" ", cut)
-    cut = clean_text(cut).strip(" ,;:-")
+def split_name(text: str) -> tuple[str, str]:
+    """'Abbey, Leslie' / 'Denney Ronald' / 'Bogue-Gilmore, Angela' -> (last, first)."""
+    cut = clean_text(text).strip(" ,;:-")
     if not cut:
-        return "", "", raw
+        return "", ""
     if "," in cut:
         last, first = [clean_text(p) for p in cut.split(",", 1)]
-        first = " ".join(first.split()[:2])   # given name + middle initial at most
-        return nice_case(last), nice_case(first), raw
+        first = " ".join(first.split()[:3])
+        return nice_case(last), nice_case(first)
     tokens = cut.split()
     if len(tokens) == 1:
-        return nice_case(tokens[0]), "", raw
-    tokens = tokens[:3]
-    return nice_case(tokens[-1]), nice_case(" ".join(tokens[:-1])), raw
+        return nice_case(tokens[0]), ""
+    # "First Last" (rare on this index: a missing comma). Take the last token as surname.
+    return nice_case(tokens[-1]), nice_case(" ".join(tokens[:-1]))
+
+
+def parse_name_cell(cell: Tag) -> tuple[str, str, str, list[str]]:
+    """Returns (last, first, license_text, labels) from 'Name - LSCSW 1264' style cells."""
+    full = clean_text(cell.get_text(" ", strip=True))
+    strong = next((t for t in cell.find_all("strong") if clean_text(t.get_text())), None)
+    if strong:
+        name_text = clean_text(strong.get_text(" ", strip=True))
+        rest = clean_text(full.replace(name_text, " ", 1))
+    else:
+        parts = re.split(r"\s+[-–—]\s*|\s*[-–—]\s+", full, maxsplit=1)
+        name_text, rest = (parts[0], parts[1] if len(parts) > 1 else "")
+        if not rest:
+            m = LABEL_PATTERN.search(full)
+            if m:
+                name_text, rest = full[: m.start()], full[m.start():]
+    # A label glued to the name without a dash ("Bogue-Gilmore, Angela LCMFT 267").
+    m = LABEL_PATTERN.search(name_text)
+    if m:
+        rest = clean_text(name_text[m.start():] + " " + rest)
+        name_text = name_text[: m.start()]
+    labels = [l.upper() for l in LABEL_PATTERN.findall(rest)]
+    last, first = split_name(name_text.strip(" -–—,"))
+    return last, first, rest.strip(" -–—,"), labels
+
+
+def cell_lines(cell: Tag) -> list[str]:
+    """Text of a cell split on <br> tags."""
+    lines, cur = [], []
+    for node in cell.descendants:
+        if isinstance(node, Tag) and node.name == "br":
+            lines.append(clean_text(" ".join(cur)))
+            cur = []
+        elif isinstance(node, NavigableString):
+            cur.append(str(node))
+    lines.append(clean_text(" ".join(cur)))
+    return [l for l in lines if l]
+
+
+def documents_in_cell(cell: Tag) -> list[tuple[str, str, str]]:
+    """[(doc_type_text, link_text, href)] for each link in the documents cell, split on <br>."""
+    docs = []
+    cur_text: list[str] = []
+    cur_link = None
+    for node in cell.descendants:
+        if isinstance(node, Tag) and node.name == "br":
+            if cur_link is not None:
+                docs.append((clean_text(" ".join(cur_text)), cur_link[0], cur_link[1]))
+            cur_text, cur_link = [], None
+        elif isinstance(node, Tag) and node.name == "a" and node.get("href"):
+            if cur_link is not None:                      # two links in one line: flush the first
+                docs.append((clean_text(" ".join(cur_text)), cur_link[0], cur_link[1]))
+                cur_text = []
+            cur_link = (clean_text(node.get_text(" ", strip=True)), node["href"].strip())
+        elif isinstance(node, NavigableString) and not (node.parent.name == "a"):
+            cur_text.append(str(node))
+    if cur_link is not None:
+        docs.append((clean_text(" ".join(cur_text)), cur_link[0], cur_link[1]))
+    return docs
+
+
+def normalise_url(href: str) -> str:
+    href = WAYBACK_PREFIX.sub("", href.strip())
+    return urljoin(BASE_URL, href)
+
+
+def is_document_link(url: str) -> bool:
+    path = urlparse(url).path.lower()
+    return path.endswith(".pdf") or "/showpublisheddocument/" in path or "/docs/" in path
 
 
 def parse_index_page(page_label: str, html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
     entries: list[dict] = []
-    for a in soup.find_all("a", href=True):
-        href = a["href"].strip()
-        path = urlparse(urljoin(BASE_URL, href)).path
-        if not path.lower().endswith(".pdf"):
+    seen_links: set[str] = set()
+
+    for tr in soup.find_all("tr"):
+        cells = tr.find_all("td")
+        if len(cells) < 2 or not tr.find("a", href=True):
             continue
-        url = urljoin(BASE_URL, href)
-        container = row_container(a)
-        row_text = clean_text(container.get_text(" ", strip=True))
-        link_text = clean_text(a.get_text(" ", strip=True))
-        basename = unquote(Path(path).name)
+        last, first, license_text, labels = parse_name_cell(cells[0])
+        dates = [d for line in cell_lines(cells[1]) for d in DATE_PATTERN.findall(line)] if len(cells) > 1 else []
+        dates = [f"{y}-{int(m):02d}-{int(d):02d}" for m, d, y in dates]
+        city = clean_text(cells[2].get_text(" ", strip=True)) if len(cells) > 3 else ""
+        doc_cell = cells[-1]
+        docs = documents_in_cell(doc_cell)
+        row_text = clean_text(tr.get_text(" ", strip=True))
 
-        case_number, code = extract_case(basename, link_text, row_text)
-        category, note = classify(code, row_text + " " + link_text)
+        for i, (doc_type, link_text, href) in enumerate(docs):
+            url = normalise_url(href)
+            if not is_document_link(url) or url in seen_links:
+                continue
+            seen_links.add(url)
+            basename = unquote(Path(urlparse(url).path).name)
+            case_number, code = extract_case(link_text, doc_type, basename)
+            category, note = classify(labels, code, row_text)
+            if len(dates) == len(docs):
+                action_date = dates[i]
+            elif len(dates) == 1:
+                action_date = dates[0]
+            else:
+                action_date = dates[0] if dates and i == 0 else ""
 
-        # Prefer the first table cell (name column), then the row text without the
-        # link label, then the link label itself, then the file name.
-        last = first = raw = ""
-        if container.name == "tr":
-            cells = container.find_all(["td", "th"])
-            if cells:
-                last, first, raw = split_name(clean_text(cells[0].get_text(" ", strip=True)))
-        if not last:
-            last, first, raw = split_name(row_text.replace(link_text, " ") if link_text else row_text)
-        if not last:
-            last, first, raw = split_name(link_text)
-        if not last:
-            last, first, raw = split_name(basename.rsplit(".", 1)[0].replace("-", " "))
+            flags = []
+            if not case_number:
+                flags.append("no case number")
+            if not last:
+                flags.append("name not parsed")
+            if not action_date:
+                flags.append("no date")
+            if not labels and not code:
+                flags.append("no license label")
 
-        flags = []
-        if not case_number:
-            flags.append("no case number")
-        if not last:
-            flags.append("name not parsed")
+            entries.append(
+                {
+                    "index_page": page_label,
+                    "index_text": row_text,
+                    "doc_label": clean_text(f"{doc_type} {link_text}"),
+                    "last_name": last,
+                    "first_name": first,
+                    "case_number": case_number,
+                    "code": code,
+                    "category": category,
+                    "category_note": note,
+                    "flags": "; ".join(flags),
+                    "filename": "",
+                    "official_url": url,
+                    "license": license_text,
+                    "action_date": action_date,
+                    "city": city,
+                }
+            )
 
-        entries.append(
-            {
-                "index_page": page_label,
-                "index_text": row_text,
-                "doc_label": link_text,
-                "last_name": last,
-                "first_name": first,
-                "case_number": case_number,
-                "code": code,
-                "category": category,
-                "category_note": note,
-                "flags": "; ".join(flags),
-                "filename": "",
-                "official_url": url,
-            }
-        )
+    # Fallback for a page without the table layout: any document link at all.
+    if not entries:
+        for a in soup.find_all("a", href=True):
+            url = normalise_url(a["href"])
+            if not is_document_link(url) or url in seen_links:
+                continue
+            seen_links.add(url)
+            container = a.parent
+            for parent in a.parents:
+                if parent.name in ("tr", "li", "p"):
+                    container = parent
+                    break
+            row_text = clean_text(container.get_text(" ", strip=True))
+            link_text = clean_text(a.get_text(" ", strip=True))
+            case_number, code = extract_case(link_text, row_text, unquote(Path(urlparse(url).path).name))
+            labels = [l.upper() for l in LABEL_PATTERN.findall(row_text)]
+            category, note = classify(labels, code, row_text)
+            last, first = split_name(re.split(r"\s+[-–—]\s+", row_text, maxsplit=1)[0])
+            entries.append(
+                {
+                    "index_page": page_label, "index_text": row_text, "doc_label": link_text,
+                    "last_name": last, "first_name": first, "case_number": case_number, "code": code,
+                    "category": category, "category_note": note, "flags": "layout fallback",
+                    "filename": "", "official_url": url, "license": "", "action_date": "", "city": "",
+                }
+            )
     return entries
+
+
+def doc_key(e: dict) -> str:
+    """Case number, or the site's document id when the link has no case number."""
+    if e["case_number"]:
+        return e["case_number"]
+    path = urlparse(e["official_url"]).path
+    m = re.search(r"/showpublisheddocument/(\d+)", path)
+    if m:
+        return f"doc{m.group(1)}"
+    return unquote(Path(path).stem)
 
 
 def assign_filenames(entries: list[dict]) -> None:
@@ -286,8 +433,7 @@ def assign_filenames(entries: list[dict]) -> None:
         name_part = f"{e['last_name']}, {e['first_name']}".strip(", ").strip()
         if not name_part:
             name_part = "UNKNOWN"
-        key_part = e["case_number"] or unquote(Path(urlparse(e["official_url"]).path).stem)
-        base = ILLEGAL_FILENAME.sub("", f"{name_part} {key_part}").strip()
+        base = ILLEGAL_FILENAME.sub("", f"{name_part} {doc_key(e)}").strip()
         n = seen.get(base, 0) + 1
         seen[base] = n
         e["filename"] = f"{base}.pdf" if n == 1 else f"{base} ({n}).pdf"
@@ -300,6 +446,7 @@ def assign_filenames(entries: list[dict]) -> None:
 MANIFEST_FIELDS = [
     "index_page", "index_text", "doc_label", "last_name", "first_name", "case_number",
     "code", "category", "category_note", "flags", "filename", "official_url",
+    "license", "action_date", "city",
 ]
 
 
@@ -350,23 +497,35 @@ def download_entries(entries: list[dict]) -> None:
 # Main
 # --------------------------------------------------------------------------- #
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--list-only", action="store_true", help="build manifest.csv, download nothing")
-    ap.add_argument("--include-review", action="store_true", help="also download 'review' entries")
-    ap.add_argument("--include-all", action="store_true", help="download every profession, not just counselors")
-    ap.add_argument("--debug-html", action="store_true", help="save each fetched index page under downloader\\debug\\")
-    args = ap.parse_args(argv)
+def load_pages(args) -> list[tuple[str, str]]:
+    """[(path, html)] for the root page and every letter page, fetched or read from --from-saved."""
+    if args.from_saved:
+        folder = Path(args.from_saved)
+        if not folder.is_absolute():
+            folder = HERE / folder
+        pages = []
+        for f in sorted(folder.glob("*.htm*")):
+            label = f.stem.lower()
+            path = INDEX_ROOT if label in ("root", "disciplinary-actions") else f"{INDEX_ROOT}/{label}"
+            pages.append((path, f.read_text(encoding="utf-8", errors="replace")))
+        if not pages:
+            raise SystemExit(f"No .html files found in {folder}")
+        print(f"Reading {len(pages)} saved page(s) from {folder}")
+        return pages
 
-    print(f"Kansas BSRB disciplinary actions -> {STATE_FOLDER}")
     root_url = urljoin(BASE_URL, INDEX_ROOT)
     print(f"Reading {root_url}")
-    root_html = fetch(root_url)
+    try:
+        root_html = fetch(root_url)
+    except Exception as exc:  # noqa: BLE001
+        raise SystemExit(
+            f"Could not read {root_url}: {exc}\n"
+            "If the page opens in your browser, the site is refusing automated requests.\n"
+            "Save the root page and each letter page (A-C ... W-Z) as root.html, a-c.html, ...\n"
+            f"into {DEBUG_DIR} and re-run with  --from-saved debug"
+        ) from exc
     pages = discover_index_pages(root_html)
     print(f"Index pages to read: {len(pages)} ({', '.join(p.rsplit('/', 1)[-1] for p in pages)})")
-
-    all_entries: list[dict] = []
-    # The root page itself may carry entries too; include it first.
     page_htmls = [(INDEX_ROOT, root_html)]
     for path in pages:
         time.sleep(PAUSE_SECONDS)
@@ -374,17 +533,34 @@ def main(argv=None) -> int:
             page_htmls.append((path, fetch(urljoin(BASE_URL, path))))
         except Exception as exc:  # noqa: BLE001
             print(f"  WARNING could not read {path}: {exc}")
+    return page_htmls
 
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--list-only", action="store_true", help="build manifest.csv, download nothing")
+    ap.add_argument("--include-review", action="store_true", help="also download 'review' entries")
+    ap.add_argument("--include-all", action="store_true", help="download every profession, not just counselors")
+    ap.add_argument("--debug-html", action="store_true", help="save each fetched index page under downloader\\debug\\")
+    ap.add_argument("--from-saved", metavar="DIR", help="parse index pages saved as root.html, a-c.html ... in DIR instead of fetching")
+    args = ap.parse_args(argv)
+
+    print(f"Kansas BSRB disciplinary actions -> {STATE_FOLDER}")
+    page_htmls = load_pages(args)
+
+    all_entries: list[dict] = []
     for path, html in page_htmls:
         label = path.rsplit("/", 1)[-1].upper()
+        if path == INDEX_ROOT:
+            label = "ROOT"
         found = parse_index_page(label, html)
-        print(f"  {label:<22} {len(found):>4} PDF links")
+        print(f"  {label:<22} {len(found):>4} document links")
         all_entries.extend(found)
-        if args.debug_html or not found:
+        if args.debug_html or (not found and path != INDEX_ROOT and not args.from_saved):
             DEBUG_DIR.mkdir(exist_ok=True)
-            (DEBUG_DIR / f"{label.lower() or 'root'}.html").write_text(html, encoding="utf-8")
+            (DEBUG_DIR / f"{label.lower()}.html").write_text(html, encoding="utf-8")
 
-    # De-duplicate identical PDF links that appear on more than one page.
+    # De-duplicate identical document links that appear on more than one page.
     unique: dict[str, dict] = {}
     for e in all_entries:
         unique.setdefault(e["official_url"], e)
@@ -392,7 +568,7 @@ def main(argv=None) -> int:
 
     if not all_entries:
         print(
-            "\nNo PDF links were found on any index page. The page layout may have changed.\n"
+            "\nNo document links were found on any index page. The page layout may have changed.\n"
             f"The fetched HTML was saved under {DEBUG_DIR} - open one in a browser and compare it\n"
             "with the live site, then adjust parse_index_page()."
         )
