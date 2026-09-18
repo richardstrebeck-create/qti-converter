@@ -39,8 +39,9 @@ present are skipped, so re-running only fetches what is new).
 | New Hampshire | 18 | 16 | 0 (see OCR note) | 21 (never fetched) | 0 | 15 MB |
 | Oklahoma | 39 | 38 | 0 (no review step; see OCR note) | 31 (LMFT and LBP, never fetched) | 0 | 9 MB |
 | Texas | 171 (172 orders; one file holds two) | 166 | 1 (nine unbookmarked packet pages, FY22 Q2) | 119 (LMFT, PSY, SW; never extracted) | 0 | 436 MB |
+| Colorado | 774 | 612 | 0 (2 application-material files flagged review in manifest.csv, not fetched) | 124 (92 LPCC candidates, 30 other license types or malpractice reports, 2 review; never fetched) | 0 | 976 MB |
 
-Total pushed: about 277 MB. No file exceeded the 95 MB single-file limit,
+Total pushed: about 277 MB, plus 436 MB for Texas and 976 MB for Colorado (added later the same day). No file exceeded the 95 MB single-file limit,
 so nothing was skipped for size.
 
 Oklahoma was added to this branch by a separate session (39 LPC orders from
@@ -199,3 +200,43 @@ themselves, about 950 MB, are not kept).
   agreed orders are in the packets), and anything after the June 2026
   packet. The BHEC licensee lookup (datamart) is reCAPTCHA-protected and
   could not be used.
+
+## Colorado (774 counselor documents in manifest.csv)
+
+Source: two DORA Division of Professions and Occupations systems. The
+"Licensee/Discipline List" roster generator
+(https://apps2.colorado.gov/dora/licensing/Lookup/GenerateRoster.aspx) is
+the index: one CSV per license type with a row per public action (case
+number, action label, effective and end dates). The "DPO Public Documents
+System" (https://www.dora.state.co.us/pls/real/DDMS_Search_GUI.DPO_Search_Form)
+is the document store: one search with State Board = Professional
+Counselors lists every document filed under the board with a direct PDF
+link. Downloaded 2026-09-18 with
+`board-orders/colorado_downloader/download_colorado_orders.py` from the
+working branch (898 documents listed, 774 counselor documents fetched).
+
+- `Colorado/` holds 774 order PDFs (976 MB; the largest is 19.1 MB)
+  for Licensed Professional Counselors and Provisional LPCs, named
+  "Lastname, Firstname <license> <effective date>.pdf" in DORA's printed
+  license form, for example "Kosley, Lisa Marie LPC.0011765 2026-05-11.pdf".
+  A second document for the same person on the same date carries " (2)".
+  15 files have no license number in DDMS and use the DDMS barcode instead;
+  11 have no effective date and end in "undated". Effective dates run from
+  1992-08-30 to 2026-06-17 (about 4 to 30 a year to 2015, 50 to 77 a year
+  since 2016).
+- `Colorado/downloader/manifest.csv` has one row per DDMS document (774
+  counselor, 92 LPCC candidate not fetched, 30 other license types or
+  malpractice-insurance reports not fetched, 2 application-material files
+  flagged review and not fetched) plus 19 "index only, no document" rows
+  for roster actions (12 people, mostly 1990s) with nothing in DDMS. 672
+  of the 774 counselor rows carry the roster's case number and action
+  label (matched on license number and effective date); the other 102
+  have the roster name and status only. `download_log.csv` records the
+  774 files written (0 failures).
+- Text layer: 196 of 774 are text-native, 578 are image scans (everything
+  through 2018, most of 2019, half of 2020, 31 later ones). Run Foxit OCR on the image-only
+  files (the `--text-check` list) before make_text_sidecars.py.
+- Not covered: the 19 roster actions with no DDMS document (Colorado Open
+  Records Act request to DORA), the 92 LPC Candidate documents (re-run with
+  `--include-candidates`), and anything filed after 2026-09-18 (re-run;
+  only new files are fetched).
