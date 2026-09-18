@@ -14,11 +14,18 @@ file names do not say which is which. So this script works in two passes:
   1. LIST + DOWNLOAD  every PDF in the folder into
         state_data\\Vermont\\_all_allied_mental_health\\
      (skipping files already present).
-  2. CLASSIFY  each PDF by reading its first pages: decisions that name a
-     "Licensed Clinical Mental Health Counselor" / LCMHC are copied into
-        state_data\\Vermont\\   as  "Lastname, Firstname docket 2025-105.pdf";
+  2. CLASSIFY  each PDF. If name_match.csv exists (written by
+     build_vermont_name_list.py from OPR's monthly discipline reports), it is
+     consulted first: a "counselor" match is copied into
+        state_data\\Vermont\\   as  "Lastname, Firstname docket 2025-105.pdf"
+     with the note "profession from monthly report"; a "drop" match (another
+     allied mental health profession) is recorded and not copied; only
+     "unmatched" files go on to the text check below. --no-name-list ignores
+     the file.
+     Text check: decisions whose first pages name a "Licensed Clinical Mental
+     Health Counselor" / LCMHC are copied into the state folder as above;
      other professions stay in _all_allied_mental_health only;
-     PDFs with no text layer (older scans) are copied to
+     PDFs with no text layer (scans) are copied to
         state_data\\Vermont\\review\\   for Foxit OCR, after which
         py download_vermont_orders.py --reclassify   sorts them.
 
@@ -35,9 +42,11 @@ The first two cannot be told apart from the name alone, so pass 2 reads the
 "In re:" line of the PDF and corrects the name order.
 
 Usage (from this folder):
+    py build_vermont_name_list.py                 # first: name list from the monthly reports
     py download_vermont_orders.py                 # list, download, classify
     py download_vermont_orders.py --list-only     # write manifest.csv only
     py download_vermont_orders.py --reclassify    # re-run pass 2 only (after OCR)
+    py download_vermont_orders.py --no-name-list  # classify by PDF text only, ignore name_match.csv
 """
 
 from __future__ import annotations
@@ -72,6 +81,7 @@ STATE_FOLDER = HERE.parent
 ALL_FOLDER = STATE_FOLDER / "_all_allied_mental_health"
 REVIEW_FOLDER = STATE_FOLDER / "review"
 MANIFEST_PATH = HERE / "manifest.csv"
+NAME_MATCH_PATH = HERE / "name_match.csv"      # written by build_vermont_name_list.py
 LOG_PATH = HERE / "download_log.csv"
 DEBUG_DIR = HERE / "debug"
 
@@ -102,12 +112,12 @@ IN_RE = re.compile(r"\bIn\s+re:?\s*(?:the\s+)?(?:license\s+of\s+)?([A-Z][A-Za-z'
 
 # Docket numbers: 2025-105, 2023-161 & 2024-188, 2022-201-to-203-2023-79, 2023-73-139-2c-2022-244-to-248
 DOCKET_TOKEN = re.compile(r"(?<!\d)(\d{4})-(\d{1,4})(?!\d)")
-DOCKET_OLD = re.compile(r"docket[_\- ]*([A-Za-z]{0,4}\d{4,8}(?:[_\-]\d{1,8})*)", re.I)
+DOCKET_OLD = re.compile(r"dockets?[_\- ]*([A-Za-z]{0,4}\d{4,8}(?:[_\-]\d{1,8})*)", re.I)
 DOC_TYPE_WORDS = {
     "signed", "order", "orders", "stipulation", "default", "summary", "suspension", "modification",
     "preliminary", "denial", "ss", "and", "of", "license", "decision", "final", "consent", "agreement",
     "amended", "corrected", "reinstatement", "dismissal", "hearing", "unsigned", "unprofessional",
-    "conduct", "to", "the", "re", "amh", "copy", "decision", "notice", "settlement",
+    "conduct", "to", "the", "re", "amh", "copy", "decision", "notice", "settlement", "docket", "dockets",
 }
 ILLEGAL_FILENAME = re.compile(r'[\\/:*?"<>|]+')
 
@@ -373,7 +383,22 @@ def make_target_name(last: str, first: str, docket: str, stem: str, seen: dict[s
 MANIFEST_FIELDS = [
     "source_file", "official_url", "last_name", "first_name", "docket",
     "category", "category_note", "text_chars", "filename", "modified", "dockets_all",
+    # appended 2026-09-18: what name_match.csv said about the file (blank when it was not used)
+    "name_match_method", "name_match_license_type", "name_match_action_dates",
 ]
+
+
+def load_name_match(use_name_list: bool = True) -> dict[str, dict]:
+    """name_match.csv from build_vermont_name_list.py, keyed by source_file. Empty when absent or disabled."""
+    if not use_name_list or not NAME_MATCH_PATH.exists():
+        return {}
+    with NAME_MATCH_PATH.open(encoding="utf-8") as fh:
+        rows = {r["source_file"]: r for r in csv.DictReader(fh)}
+    print(f"  name list: {NAME_MATCH_PATH.name} covers {len(rows)} files "
+          f"(counselor {sum(1 for r in rows.values() if r.get('proposed_category') == 'counselor')}, "
+          f"drop {sum(1 for r in rows.values() if r.get('proposed_category') == 'drop')}, "
+          f"unmatched {sum(1 for r in rows.values() if r.get('proposed_category') == 'unmatched')})")
+    return rows
 
 
 def write_manifest(rows: list[dict]) -> None:
@@ -426,12 +451,15 @@ def load_listing_meta() -> dict[str, dict]:
     return meta
 
 
-def classify_all(listing: dict[str, dict] | None = None) -> list[dict]:
+def classify_all(listing: dict[str, dict] | None = None, use_name_list: bool = True) -> list[dict]:
     STATE_FOLDER.mkdir(parents=True, exist_ok=True)
     listing = listing or load_listing_meta()
+    name_match = load_name_match(use_name_list)
     rows: list[dict] = []
     seen: dict[str, int] = {}
     counts: dict[str, int] = {}
+    from_name_list: dict[str, int] = {}
+    stale_review: list[str] = []
     # Files the user OCR'd in review\ take precedence over the raw copy.
     sources = {p.name: p for p in ALL_FOLDER.glob("*.pdf")}
     if REVIEW_FOLDER.exists():
@@ -453,6 +481,28 @@ def classify_all(listing: dict[str, dict] | None = None) -> list[dict]:
                     name_note = "name confirmed by PDF"
             else:
                 name_note = f"PDF names {pdf_first} {pdf_last}; file name says {first} {last}"
+        # The monthly-report name list settles the profession without OCR; the PDF text is the fallback.
+        nm = name_match.get(name) or {}
+        if nm.get("proposed_category") in ("counselor", "drop"):
+            text_category, text_note = category, note
+            category = nm["proposed_category"]
+            detail = f"{nm.get('match_method', '')}, {nm.get('matched_action_dates', '')}".strip(", ")
+            if category == "counselor":
+                note = f"profession from monthly report ({nm.get('matched_license_type', '')}; {detail})"
+            else:
+                note = f"{nm.get('matched_license_type', '')} per monthly report ({detail})"
+            if nm.get("match_note"):
+                note += f"; {nm['match_note']}"
+            if text_category in ("counselor", "drop") and text_category != category:
+                note += f"; PDF text says {text_category}" + (f" ({text_note})" if text_note else "")
+            if not pdf_last and nm.get("match_method") == "swapped name":
+                last, first = first, last
+                name_note = "name order corrected from monthly report"
+            elif not pdf_last and nm.get("match_method") == "exact name":
+                name_note = "name confirmed by monthly report"
+            from_name_list[category] = from_name_list.get(category, 0) + 1
+            if REVIEW_FOLDER.exists() and (REVIEW_FOLDER / name).exists():
+                stale_review.append(name)
         filename = ""
         if category == "counselor":
             filename = make_target_name(last, first, docket, src.stem, seen)
@@ -479,12 +529,20 @@ def classify_all(listing: dict[str, dict] | None = None) -> list[dict]:
                 "filename": filename,
                 "modified": (listing.get(name) or {}).get("modified", ""),
                 "dockets_all": dockets_all,
+                "name_match_method": nm.get("match_method", ""),
+                "name_match_license_type": nm.get("matched_license_type", ""),
+                "name_match_action_dates": nm.get("matched_action_dates", ""),
             }
         )
     write_manifest(rows)
     print(f"\nPass 2 done. Manifest: {MANIFEST_PATH}\n  " + ", ".join(f"{k}: {v}" for k, v in sorted(counts.items())))
+    if from_name_list:
+        print("  settled by the monthly-report name list: " + ", ".join(f"{k}: {v}" for k, v in sorted(from_name_list.items())))
     if counts.get("review"):
         print(f"  Review items are in {REVIEW_FOLDER} (OCR them, then run --reclassify).")
+    if stale_review:
+        print(f"  {len(stale_review)} file(s) in {REVIEW_FOLDER.name}\\ are now settled by the name list and need no OCR: "
+              + ", ".join(stale_review[:10]) + (" ..." if len(stale_review) > 10 else ""))
     return rows
 
 
@@ -492,6 +550,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--list-only", action="store_true", help="list the folder and write manifest.csv, download nothing")
     ap.add_argument("--reclassify", action="store_true", help="skip listing/downloading; re-run the text classification")
+    ap.add_argument("--no-name-list", action="store_true",
+                    help="ignore name_match.csv (from build_vermont_name_list.py) and classify by PDF text only")
     args = ap.parse_args(argv)
 
     print(f"Vermont OPR allied mental health decisions -> {STATE_FOLDER}")
@@ -521,9 +581,9 @@ def main(argv=None) -> int:
             print(f"Manifest written with {len(rows)} PDFs: {MANIFEST_PATH}")
             return 0
         download_all(files)
-        classify_all(listing)
+        classify_all(listing, use_name_list=not args.no_name_list)
         return 0
-    classify_all()
+    classify_all(use_name_list=not args.no_name_list)
     return 0
 
 

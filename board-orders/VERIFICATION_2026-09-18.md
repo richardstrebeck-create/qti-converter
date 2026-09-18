@@ -20,7 +20,7 @@ Summary
 |---|---|---|---|---|---|
 | Kansas | No (403). Archived copy of 2026-08-14 used | No: table, no .pdf links | 583 documents, 511 licensees | 78 documents, 60 people, 1998 to 2026 | Could not verify |
 | New Hampshire | No (403). Archived copies of 2025-05/06 used | Partly: no table, three layouts | 39 documents | 18 documents, 16 people, 2017 to 2024 | Could not verify |
-| Vermont | Yes | Partly: REST closed, three file-name shapes | 138 PDFs | Unknown until OCR (all samples are scans) | Scanned, no text (8 of 8) |
+| Vermont | Yes | Partly: REST closed, three file-name shapes | 138 PDFs | 36 documents (26 people) by monthly-report name match, 2019 to 2026; 67 files still need OCR | Scanned, no text (8 of 8); monthly reports are text |
 | Iowa | Yes | No: different source entirely | 803 files (801 PDF) | Unknown until download (353 people, all professions) | Mostly text; about a quarter need OCR |
 
 ## Kansas (BSRB Disciplinary Actions)
@@ -173,10 +173,94 @@ are 92 text-native PDFs (2019-01 to 2026-08), one line per action
 profession and the name order for 2019 and later dockets, which is 90 of
 the 138 files.
 
-**Still to decide.** Whether to OCR all 138 files (Foxit, then
-`--reclassify`) or to build the LCMHC name list from the monthly reports
-first and OCR only the matches plus the pre-2019 files. The monthly-report
-pass is not built; it would be a small addition to this script.
+**Still to decide.** Resolved later the same day: the monthly-report pass
+was built (next subsection). OCR is now needed only for the 67 files the
+name list cannot settle.
+
+### Monthly-report name list (built and run live 2026-09-18)
+
+`build_vermont_name_list.py` downloads OPR's monthly discipline reports,
+parses them, and matches the names against the folder listing;
+`download_vermont_orders.py` reads the result (`name_match.csv`) before it
+looks at any PDF text. `--no-name-list` turns that off.
+
+**Reports found.** The index page links 92 PDFs directly, 2019-01 to
+2026-08, one per month with no gaps, at
+`.../monthly_discipline_reports/YYYY/monthly_discipline_reports_YYYY-MM.pdf`.
+No year sub-pages exist. 2026-09 is not posted yet (the month is not over);
+the script probes that predictable URL for any month the page does not link
+and reports it as missing if it is not there. All 92 downloaded (15 KB to
+120 KB each, cached under `monthly_reports\`, not committed).
+
+**Parsing.** All 92 parse; none is unparseable and no month is empty. Three
+layouts over the years, all handled by grouping words into visual rows and
+splitting the entry column from the profession column by position:
+
+- 2019-01 to 2023-12: `First Last, City, State` at the left with the
+  profession in a right-hand column on the same line, then `date; action`
+  (2019-2020, sometimes spelled "June 7th, 2019") or `date: action` below.
+  2021-05 and 2021-06 print no dates at all (17 rows).
+- 2024-01 to 2025-12: the same, names now `Last, First, City, ST`; a few
+  entries still in First Last order; abbreviations RN, LPN, LNA appear.
+- 2026-01 onward: a bullet, `Last, First, City, ST`, then one line
+  `Profession License Suspended on 1/13/2026`. Two entries in 2026-01 carry
+  only the profession (no action or date).
+
+Verified by eye on 2019-01, 2019-06, 2020-03, 2021-06, 2023-01, 2023-09,
+2024-01, 2024-10, 2025-04, 2026-01 and 2026-08, and by listing every allied
+mental health row (78) against the source text. Totals: 960 actions; 23
+rows without a date (the months above plus four odd entries); 2 rows
+without a profession (the report itself omits it). Two reports (2022-09,
+2022-12) carry a COVID-era footnote, which is skipped. The reports never
+print docket numbers, so the "docket" match method in the code cannot fire
+on this source.
+
+**Allied mental health rows.** 78 of the 960: 37 LCMHC rows for 27 people
+(actions dated 2019-08-15 to 2026-08-26, in 28 different monthly reports),
+40 non-licensed psychotherapist, 1 LMFT, 0 psychoanalyst. They are in
+`lcmhc_actions.csv` with `license_type` filled in; `monthly_actions_all.csv`
+has everything. Licensed alcohol and drug abuse counselors are a different
+board and are left out of the allied set on purpose.
+
+**Matching the 138 folder PDFs** (`name_match.csv`): 71 matched, 67 not.
+
+| Result | Files | Detail |
+|---|---|---|
+| counselor | 36 | 26 people; three files (two people) also appear as non-licensed psychotherapists in other months (noted) |
+| drop | 35 | 33 non-licensed psychotherapist, 2 LMFT |
+| unmatched, pre-2019 docket | 56 | before the reports begin; OCR |
+| unmatched, 2019+ docket, name in no report | 10 | Quezada 2023-88, Sellers 2024-13, Kirby 2024-85, Meunier 2025-131, Perez 2025-150, Quintiliani 2026-23, Stern 2026-88, Benevento 2020-49, Fredrick 2019-78, Mason 2019-140; OCR |
+| unmatched, name matches a non-allied row only | 1 | Pelkey 2023-91 (a social worker of that name); OCR |
+
+By method: 57 exact name, 5 swapped name (file names in Last First order,
+now corrected from the report), 9 fuzzy. The nine fuzzy matches were
+checked by hand and are all the same person: hyphenated "Best-Bragg" for
+"Best", "Savlatore" for "Salvatore", "Wickstron" for "Wickstrom", "Harald"
+for "Harold", "Magel" for "Mangel", "Ron" for "Ronalds", "Kornegay,
+Holland Tasha" for "Tasha Kornegay", and "MacDonald Ward" for "MacDonald".
+Name matching drops case, punctuation, hyphens, apostrophes, single-letter
+initials, suffixes and the words "docket/dockets", and knows common
+nicknames. A name that matches only a non-allied profession is treated as
+unmatched, not as a drop, so a same-name nurse cannot discard a counselor's
+file.
+
+**Could not verify.** Whether the ten 2019+ names missing from the reports
+are LCMHCs: the reports do not list every filing (dismissals and some
+stipulations seem to be omitted), so only OCR will tell. Whether a
+"counselor" match always refers to the same docket as the file: a person
+with an old and a new docket is matched by name alone, and the reports
+carry no docket numbers. The downloader's name-list path was exercised on
+a stand-in folder of 138 blank PDFs with the real file names (36 copied
+as counselor, 35 dropped, 67 to `review\`, OCR'd stand-ins in `review\`
+classified by text, `--no-name-list` back to 136 in review), not on the
+real decision PDFs, which were not downloaded in this session.
+
+**Changes to the downloader.** Reads `name_match.csv` first in pass 2
+(counselor copied with the note "profession from monthly report", drop
+recorded, unmatched to the text check); `--no-name-list`; three manifest
+columns appended (`name_match_method`, `name_match_license_type`,
+`name_match_action_dates`); file names with "dockets" (plural) now parse.
+`manifest.csv` was re-listed live the same day (still 138 files).
 
 ## Iowa (Board of Behavioral Health Professionals)
 
