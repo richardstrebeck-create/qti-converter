@@ -262,7 +262,9 @@ def notice_rows(record: dict, profile: dict | None, category: str, note: str) ->
         if non_pdf:
             flags.append("attachment is not application/pdf: " + ", ".join(a.get("tc_content_type") or "?" for a in non_pdf))
         eff = (n.get("effectiveDate") or "").strip()
-        if not DATE_PATTERN.match(eff):
+        if DATE_PATTERN.match(eff):
+            eff = eff[:10]          # older notices carry a full timestamp ("1989-10-19T06:00:00.000Z")
+        else:
             flags.append("no effective date")
         rows.append({
             **base,
