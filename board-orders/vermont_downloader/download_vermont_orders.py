@@ -11,6 +11,11 @@ That folder mixes Licensed Clinical Mental Health Counselors with marriage and
 family therapists, psychoanalysts and non-licensed psychotherapists, and the
 file names do not say which is which. So this script works in two passes:
 
+  0. NAME LIST  build_vermont_name_list.py is run first (it lives next to this
+     script): OPR's monthly discipline reports are downloaded (new months
+     only), parsed, and matched by name against the folder listing, giving
+     name_match.csv. This settles the profession and the name order for most
+     2019+ decisions without OCR. --no-name-list skips it.
   1. LIST + DOWNLOAD  every PDF in the folder into
         state_data\\Vermont\\_all_allied_mental_health\\
      (skipping files already present).
@@ -42,11 +47,11 @@ The first two cannot be told apart from the name alone, so pass 2 reads the
 "In re:" line of the PDF and corrects the name order.
 
 Usage (from this folder):
-    py build_vermont_name_list.py                 # first: name list from the monthly reports
-    py download_vermont_orders.py                 # list, download, classify
-    py download_vermont_orders.py --list-only     # write manifest.csv only
-    py download_vermont_orders.py --reclassify    # re-run pass 2 only (after OCR)
-    py download_vermont_orders.py --no-name-list  # classify by PDF text only, ignore name_match.csv
+    py download_vermont_orders.py                 # name list, list, download, classify
+    py download_vermont_orders.py --list-only     # name list + folder listing -> manifest.csv (no downloads)
+    py download_vermont_orders.py --reclassify    # refresh the name list, re-run pass 2 only (after OCR)
+    py download_vermont_orders.py --no-name-list  # skip the monthly reports; classify by PDF text only
+    py download_vermont_orders.py --offline-name-list   # reuse the cached reports, do not fetch new months
 """
 
 from __future__ import annotations
@@ -388,6 +393,46 @@ MANIFEST_FIELDS = [
 ]
 
 
+def build_name_list(manifest_rows: list[dict], offline: bool) -> bool:
+    """Pass 0: run build_vermont_name_list.py's pipeline against this listing. Returns True on success."""
+    try:
+        sys.path.insert(0, str(HERE))
+        import build_vermont_name_list as bv
+    except ImportError as exc:
+        print(f"  name list skipped: build_vermont_name_list.py not found next to this script ({exc})")
+        return False
+    try:
+        bv.build(offline=offline, manifest=manifest_rows)
+        return True
+    except SystemExit as exc:
+        print(f"  name list skipped: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  name list failed ({str(exc)[:120]}); "
+              + ("the previous name_match.csv will be used" if NAME_MATCH_PATH.exists() else "classifying by PDF text only"))
+    return False
+
+
+def apply_name_list_to_listing(rows: list[dict], name_match: dict[str, dict]) -> dict[str, int]:
+    """In --list-only mode, put the proposed category into the manifest so it already says counselor / drop."""
+    counts: dict[str, int] = {}
+    for r in rows:
+        nm = name_match.get(r["source_file"]) or {}
+        cat = nm.get("proposed_category", "")
+        if cat in ("counselor", "drop"):
+            r["category"] = cat
+            r["category_note"] = "; ".join(p for p in (
+                f"{'LCMHC' if cat == 'counselor' else nm.get('matched_license_type', '')} per monthly report "
+                f"({nm.get('match_method', '')}; {nm.get('matched_action_dates', '')}); not downloaded",
+                nm.get("match_note", ""), r.get("category_note", "")) if p)
+            if nm.get("match_method") == "swapped name":
+                r["last_name"], r["first_name"] = r["first_name"], r["last_name"]
+        r["name_match_method"] = nm.get("match_method", "")
+        r["name_match_license_type"] = nm.get("matched_license_type", "")
+        r["name_match_action_dates"] = nm.get("matched_action_dates", "")
+        counts[r["category"]] = counts.get(r["category"], 0) + 1
+    return counts
+
+
 def load_name_match(use_name_list: bool = True) -> dict[str, dict]:
     """name_match.csv from build_vermont_name_list.py, keyed by source_file. Empty when absent or disabled."""
     if not use_name_list or not NAME_MATCH_PATH.exists():
@@ -439,6 +484,13 @@ def download_all(files: list[dict]) -> None:
             fh.flush()
             time.sleep(PAUSE_SECONDS)
     print(f"\nPass 1 done. Downloaded {ok}, already present {skipped}, failed {failed}. Log: {LOG_PATH}")
+
+
+def load_manifest_rows() -> list[dict]:
+    if not MANIFEST_PATH.exists():
+        return []
+    with MANIFEST_PATH.open(encoding="utf-8") as fh:
+        return list(csv.DictReader(fh))
 
 
 def load_listing_meta() -> dict[str, dict]:
@@ -551,7 +603,9 @@ def main(argv=None) -> int:
     ap.add_argument("--list-only", action="store_true", help="list the folder and write manifest.csv, download nothing")
     ap.add_argument("--reclassify", action="store_true", help="skip listing/downloading; re-run the text classification")
     ap.add_argument("--no-name-list", action="store_true",
-                    help="ignore name_match.csv (from build_vermont_name_list.py) and classify by PDF text only")
+                    help="skip the monthly-report pass and ignore name_match.csv; classify by PDF text only")
+    ap.add_argument("--offline-name-list", action="store_true",
+                    help="build the name list from the cached monthly reports without fetching new months")
     args = ap.parse_args(argv)
 
     print(f"Vermont OPR allied mental health decisions -> {STATE_FOLDER}")
@@ -565,24 +619,33 @@ def main(argv=None) -> int:
             )
             return 1
         listing = {unquote(Path(f["path"]).name): f for f in files}
+        rows = []
+        for f in files:
+            stem = Path(unquote(f["path"])).stem
+            last, first, docket, name_note = name_from_filename(stem)
+            dockets_all, _ = dockets_from(stem)
+            rows.append(
+                {"source_file": unquote(Path(f["path"]).name), "official_url": SITE + quote(f["path"]),
+                 "last_name": last, "first_name": first, "docket": docket,
+                 "category": "not downloaded", "category_note": name_note, "text_chars": "",
+                 "filename": "", "modified": f.get("modified", ""), "dockets_all": dockets_all}
+            )
+        write_manifest(rows)
+        if not args.no_name_list:
+            print("\nPass 0: LCMHC name list from the monthly discipline reports")
+            build_name_list(rows, offline=args.offline_name_list)
         if args.list_only:
-            rows = []
-            for f in files:
-                stem = Path(unquote(f["path"])).stem
-                last, first, docket, name_note = name_from_filename(stem)
-                dockets_all, _ = dockets_from(stem)
-                rows.append(
-                    {"source_file": unquote(Path(f["path"]).name), "official_url": SITE + quote(f["path"]),
-                     "last_name": last, "first_name": first, "docket": docket,
-                     "category": "not downloaded", "category_note": name_note, "text_chars": "",
-                     "filename": "", "modified": f.get("modified", ""), "dockets_all": dockets_all}
-                )
+            counts = apply_name_list_to_listing(rows, load_name_match(not args.no_name_list))
             write_manifest(rows)
-            print(f"Manifest written with {len(rows)} PDFs: {MANIFEST_PATH}")
+            print(f"\nManifest written with {len(rows)} PDFs: {MANIFEST_PATH}\n  "
+                  + ", ".join(f"{k}: {v}" for k, v in sorted(counts.items())))
             return 0
         download_all(files)
         classify_all(listing, use_name_list=not args.no_name_list)
         return 0
+    if not args.no_name_list:
+        print("Pass 0: refreshing the LCMHC name list from the monthly discipline reports")
+        build_name_list(load_manifest_rows(), offline=args.offline_name_list)
     classify_all(use_name_list=not args.no_name_list)
     return 0
 

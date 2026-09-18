@@ -43,6 +43,9 @@ What it does (three passes):
         unmatched   no usable report row (pre-2019 dockets, or the names differ)
      download_vermont_orders.py reads name_match.csv in its classify pass.
 
+download_vermont_orders.py runs all of this itself as its pass 0, so this
+script only needs to be run by hand to redo the name list on its own.
+
 Usage (from this folder):
     py build_vermont_name_list.py               # download new reports, parse, match
     py build_vermont_name_list.py --offline     # parse and match the cached reports only
@@ -717,14 +720,14 @@ def match_manifest(actions: list[dict], manifest: list[dict]) -> list[dict]:
 
 # --------------------------------------------------------------------------- #
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--offline", action="store_true", help="do not touch the website; parse the cached reports only")
-    ap.add_argument("--debug", action="store_true", help="write one parsed_YYYY-MM.txt per report under debug\\")
-    ap.add_argument("--manifest", default=str(MANIFEST_PATH), help="folder listing to match against (default manifest.csv)")
-    args = ap.parse_args(argv)
-
-    paths, missing = download_reports(args.offline)
+def build(offline: bool = False, debug: bool = False, manifest: list[dict] | None = None,
+          manifest_path: Path = MANIFEST_PATH) -> tuple[list[dict], list[dict]]:
+    """
+    Run the three passes and return (actions, matches). `manifest` is the folder listing to
+    match against (rows shaped like manifest.csv); when None it is read from manifest_path.
+    download_vermont_orders.py calls this as its pass 0, so one run does everything.
+    """
+    paths, missing = download_reports(offline)
 
     print(f"\nPass 2: parsing {len(paths)} reports")
     actions: list[dict] = []
@@ -732,7 +735,7 @@ def main(argv=None) -> int:
     per_month: dict[str, int] = {}
     for p in paths:
         try:
-            rows, warns = parse_report(p, debug=args.debug)
+            rows, warns = parse_report(p, debug=debug)
         except Exception as exc:  # noqa: BLE001
             warnings.append(f"{p.name}: could not parse ({exc})")
             continue
@@ -764,13 +767,13 @@ def main(argv=None) -> int:
         print(f"  warning: {w}")
     print(f"  wrote {ALL_ACTIONS_PATH.name} and {LCMHC_ACTIONS_PATH.name}")
 
-    manifest_path = Path(args.manifest)
-    if not manifest_path.exists():
-        print(f"\nPass 3 skipped: {manifest_path} not found. Run download_vermont_orders.py --list-only first.")
-        return 0
-    with manifest_path.open(encoding="utf-8") as fh:
-        manifest = list(csv.DictReader(fh))
-    print(f"\nPass 3: matching {len(manifest)} folder PDFs from {manifest_path.name}")
+    if manifest is None:
+        if not manifest_path.exists():
+            print(f"\nPass 3 skipped: {manifest_path} not found. Run download_vermont_orders.py --list-only first.")
+            return actions, []
+        with manifest_path.open(encoding="utf-8") as fh:
+            manifest = list(csv.DictReader(fh))
+    print(f"\nPass 3: matching {len(manifest)} folder PDFs")
     matches = match_manifest(actions, manifest)
     write_csv(NAME_MATCH_PATH, matches, MATCH_FIELDS)
     cats: dict[str, int] = {}
@@ -787,6 +790,16 @@ def main(argv=None) -> int:
         for m in fuzzy:
             print(f"    {m['source_file']}  ->  {m['matched_name_as_printed']}  [{m['matched_license_type']}]")
     print(f"  wrote {NAME_MATCH_PATH}")
+    return actions, matches
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--offline", action="store_true", help="do not touch the website; parse the cached reports only")
+    ap.add_argument("--debug", action="store_true", help="write one parsed_YYYY-MM.txt per report under debug\\")
+    ap.add_argument("--manifest", default=str(MANIFEST_PATH), help="folder listing to match against (default manifest.csv)")
+    args = ap.parse_args(argv)
+    build(offline=args.offline, debug=args.debug, manifest_path=Path(args.manifest))
     return 0
 
 

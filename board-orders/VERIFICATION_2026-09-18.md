@@ -179,7 +179,8 @@ name list cannot settle.
 
 ### Monthly-report name list (built and run live 2026-09-18)
 
-`build_vermont_name_list.py` downloads OPR's monthly discipline reports,
+`build_vermont_name_list.py` (run automatically by the downloader as its pass 0,
+and runnable on its own) downloads OPR's monthly discipline reports,
 parses them, and matches the names against the folder listing;
 `download_vermont_orders.py` reads the result (`name_match.csv`) before it
 looks at any PDF text. `--no-name-list` turns that off.

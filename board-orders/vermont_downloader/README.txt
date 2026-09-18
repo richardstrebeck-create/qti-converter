@@ -13,26 +13,21 @@ those first and OCRs only what they cannot settle.
 
 ORDER OF OPERATIONS
 
-1. Build the name list from the monthly reports
-       double-click Run_Vermont_Name_List.cmd
-       (or:  py build_vermont_name_list.py)
-   Downloads the monthly discipline reports into monthly_reports\ (92 as of
-   2026-09-18; only new months are fetched on later runs), reads every
-   action into monthly_actions_all.csv, keeps the allied mental health rows
-   in lcmhc_actions.csv, and matches them by name against the folder listing
-   in manifest.csv. The result is name_match.csv: one row per folder PDF
-   with a proposed category
+1. Run the downloader
+       double-click Run_Vermont_Downloader.cmd
+   PASS 0 builds the LCMHC name list from the monthly reports (this is
+   build_vermont_name_list.py, run automatically; it must sit next to the
+   downloader). It downloads the monthly discipline reports into
+   monthly_reports\ (92 as of 2026-09-18; only new months are fetched on
+   later runs), reads every action into monthly_actions_all.csv, keeps the
+   allied mental health rows in lcmhc_actions.csv, and matches them by name
+   against the folder listing. The result is name_match.csv: one row per
+   folder PDF with a proposed category
        counselor   the name matches an LCMHC action in a monthly report
        drop        the name matches only another allied profession
                    (non-licensed psychotherapist, LMFT, psychoanalyst)
        unmatched   no usable report row (pre-2019 dockets, or a name that
                    does not appear in any report)
-   Needs manifest.csv to exist. If it does not, run
-       py download_vermont_orders.py --list-only
-   first, then run the name list again.
-
-2. Run the downloader
-       double-click Run_Vermont_Downloader.cmd
    PASS 1 lists the decisions folder and downloads EVERY PDF, 1.5 s apart
    with three retries, into state_data\Vermont\_all_allied_mental_health\
    (files already present are skipped; outcomes go to download_log.csv).
@@ -46,8 +41,18 @@ ORDER OF OPERATIONS
        pages are read; a readable text layer naming an LCMHC is kept, other
        professions are dropped, and PDFs with no text layer (all of them,
        on the first run) are copied to state_data\Vermont\review\ for OCR.
-   To ignore the name list and classify by PDF text only:
+   To see the verdicts before downloading anything:
+       py download_vermont_orders.py --list-only
+   writes manifest.csv with counselor / drop already filled in where the
+   monthly reports settle it ("not downloaded" otherwise).
+   To skip the monthly reports and classify by PDF text only:
        py download_vermont_orders.py --no-name-list
+
+2. (Optional) rebuild the name list on its own
+       double-click Run_Vermont_Name_List.cmd
+       (or:  py build_vermont_name_list.py)
+   Same pass 0, run by hand, for example to eyeball the fuzzy matches in
+   name_match.csv without touching the downloads. Needs manifest.csv.
 
 3. OCR only what landed in review\
    Run Foxit OCR on state_data\Vermont\review\ (about 67 files on
@@ -56,8 +61,9 @@ ORDER OF OPERATIONS
 
 4. Re-classify
        py download_vermont_orders.py --reclassify
-   Re-runs pass 2 only. Name-list matches stay as they were; the OCR'd
-   files are sorted by their text. Repeat 3 and 4 if some remain in review.
+   Refreshes the name list (new monthly reports, if any) and re-runs pass 2
+   only; the OCR'd files are sorted by their text. Repeat 3 and 4 if some
+   remain in review.
 
 WHAT TO CHECK AFTER THE RUN
 
@@ -88,20 +94,22 @@ WHAT TO CHECK AFTER THE RUN
   OCR"); it does not delete anything from review\.
 
 FILES IN THIS FOLDER
-    build_vermont_name_list.py   step 1 (monthly reports -> name_match.csv)
-    download_vermont_orders.py   steps 2 and 4
-    Run_Vermont_Name_List.cmd    double-click for step 1
-    Run_Vermont_Downloader.cmd   double-click for step 2
+    download_vermont_orders.py   the downloader (runs pass 0 itself)
+    build_vermont_name_list.py   pass 0 (monthly reports -> name_match.csv),
+                                 imported by the downloader; runnable alone
+    Run_Vermont_Downloader.cmd   double-click for step 1
+    Run_Vermont_Name_List.cmd    double-click for the optional step 2
     manifest.csv                 one row per folder PDF: names, docket,
                                  category, note, target filename, and the
                                  name-list columns
-    name_match.csv               step 1 output, read by step 2
+    name_match.csv               pass 0 output, read by pass 2
     lcmhc_actions.csv            allied mental health actions from the reports
     monthly_actions_all.csv      every action in every monthly report
     monthly_reports\             cached monthly report PDFs (not in git)
 
 Other options:
-    py download_vermont_orders.py --list-only        list the folder, download nothing
+    py download_vermont_orders.py --list-only        name list + folder listing, download nothing
+    py download_vermont_orders.py --offline-name-list  reuse the cached reports, fetch no new months
     py build_vermont_name_list.py --offline          re-parse the cached reports, no web
     py build_vermont_name_list.py --debug            write debug\parsed_YYYY-MM.txt per report
 
