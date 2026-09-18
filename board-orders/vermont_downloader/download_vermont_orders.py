@@ -86,6 +86,7 @@ HEADERS = {
 }
 PAGES_TO_READ = 3          # how many pages of each PDF to scan for the profession
 MIN_TEXT_CHARS = 200       # fewer than this on the first pages = treat as a scan
+MIN_ALPHA_RATIO = 0.5      # share of letters in the extracted text below which it is treated as unreadable
 MAX_LIST_PAGES = 200       # safety stop for the folder paging
 
 COUNSELOR = re.compile(r"clinical mental health counsel|\bLCMHC\b|mental health counselor", re.I)
@@ -249,11 +250,22 @@ def pdf_text(path: Path, pages: int = PAGES_TO_READ) -> str:
     return "\n".join(text)
 
 
+def text_is_readable(text: str) -> bool:
+    """False for a text layer that is really glyph codes (Type3 fonts with no Unicode map)."""
+    t = text.strip()
+    if not t:
+        return False
+    letters = sum(c.isalpha() for c in t)
+    return letters / len(t) >= MIN_ALPHA_RATIO
+
+
 def classify_text(text: str) -> tuple[str, str, int]:
     """Return (category, note, chars): counselor / drop / review."""
     chars = len(text.strip())
     if chars < MIN_TEXT_CHARS:
         return "review", "no text layer (scan) - OCR then --reclassify", chars
+    if not text_is_readable(text):
+        return "review", "text layer unreadable (Type3 font, no Unicode map) - OCR then --reclassify", chars
     if COUNSELOR.search(text):
         return "counselor", "", chars
     for pattern, label in OTHER_RULES:
@@ -447,7 +459,7 @@ def classify_all(listing: dict[str, dict] | None = None) -> list[dict]:
             dest = STATE_FOLDER / filename
             if not dest.exists():
                 shutil.copy2(src, dest)
-        elif category == "review" and "scan" in note:
+        elif category == "review" and "OCR" in note:
             REVIEW_FOLDER.mkdir(exist_ok=True)
             dest = REVIEW_FOLDER / name
             if not dest.exists():

@@ -1,35 +1,45 @@
 """
 Iowa Board of Behavioral Health Professionals order downloader (LMHC only).
 
-Iowa's Department of Inspections, Appeals and Licensing (DIAL) publishes board
-actions as a dated list at https://dial.iowa.gov/i-need/board-actions, one page
-per action (or per posting date), each linking the order documents (statement
-of charges, settlement agreement, final order, emergency order). The list gives
-names, cities and case numbers but not the licence type, and since 2024-07-01
-the board also covers social workers, psychologists and behaviour analysts
-(before that, the Board of Behavioral Science covered LMHC and LMFT only).
+Where the orders really are (verified live 2026-09-18):
 
-So this script works in three passes:
+  * https://dial.iowa.gov/i-need/board-actions is ONE page with an accordion
+    per board. The Behavioral Health section lists only the last two years of
+    "Notice of Board Action" e-mail bulletins (GovDelivery), each naming the
+    licensees and case numbers; the bulletins link every document to
+    documents.iowa.gov. There are no per-action pages and no pagination.
+  * https://documents.iowa.gov is the state's document search. Its search
+    API (POST /home/search) returns every "Public Discipline Documents" file
+    filed under "Behavioral Health Professionals, Board of" (about 800 files
+    on 2026-09-18, including the pre-2024 Board of Behavioral Science
+    archive, bulk-uploaded 2023-10-30), with the licensee's last name, first
+    name, city and state as metadata. Each file downloads from
+    /home/download/<id>. This script uses that index.
 
-  1. CRAWL    the board-actions list (following pagination) and open every
-              action page; keep pages that mention the behavioural health /
-              behavioural science board or a counselling licence.
-  2. DOWNLOAD every PDF linked from a kept page into
-                 state_data\Iowa\_all_behavioral_health\
+The index does not say the licence type, and since 2024-07-01 the board also
+covers social workers, psychologists and behaviour analysts (before that, the
+Board of Behavioral Science covered LMHC and LMFT only). So the script works
+in three passes:
+
+  1. CRAWL    the documents.iowa.gov index (200 records per request) and
+              write one row per document to actions.csv.
+  2. DOWNLOAD every document into  state_data\\Iowa\\_all_behavioral_health\\
+              as "<id>__<document name>.pdf"  (two Word files exist; they are
+              saved with their own extension and sent to review).
   3. CLASSIFY each PDF by reading its first pages: LMHC / mental health
-              counselor orders are copied into  state_data\Iowa\  as
+              counselor orders are copied into  state_data\\Iowa\\  as
               "Lastname, Firstname <case>.pdf"; other professions stay in the
-              holding folder; scans with no text go to  state_data\Iowa\review\
+              holding folder; scans with no text go to  state_data\\Iowa\\review\\
               for OCR, then  py download_iowa_orders.py --reclassify
 
-Everything found is written to manifest.csv (one row per PDF) and
-actions.csv (one row per action page).
+Everything found is written to manifest.csv (one row per file) and
+actions.csv (one row per index record).
 
 Usage (from this folder):
     py download_iowa_orders.py                 # crawl, download, classify
     py download_iowa_orders.py --list-only     # crawl only, write actions.csv
     py download_iowa_orders.py --reclassify    # re-run pass 3 only (after OCR)
-    py download_iowa_orders.py --max-pages 20  # limit list pagination (default 300)
+    py download_iowa_orders.py --max-pages 2   # limit index pages (200 records each; default 300)
 """
 
 from __future__ import annotations
@@ -41,14 +51,26 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from urllib.parse import urljoin, urlparse, unquote, parse_qs
+from urllib.parse import unquote
 
 import requests
-from bs4 import BeautifulSoup
 
-SITE = "https://dial.iowa.gov"
-LIST_PATH = "/i-need/board-actions"
-PDF_HOSTS = ("dial.iowa.gov", "documents.iowa.gov", "hhs.iowa.gov", "idph.iowa.gov", "www.dial.iowa.gov")
+SITE = "https://documents.iowa.gov"
+SEARCH_URL = f"{SITE}/home/search"
+DOWNLOAD_URL = f"{SITE}/home/download/"
+DIAL_LIST = "https://dial.iowa.gov/i-need/board-actions"      # informational only
+# Search category for DIAL boards and the attribute ids used by the index (from
+# documents.iowa.gov/home/searchfields/10328504 on 2026-09-18).
+CATEGORY_ID = "10328504"
+ATTR = {
+    "board": "10328504_2", "category": "10328504_3", "other_name": "10328504_4",
+    "last": "10328504_6", "first": "10328504_7", "middle": "10328504_8", "business": "10328504_9",
+    "order_no": "10328504_10", "state": "10328504_11", "city": "10328504_12",
+    "organization": "10405082_2", "archived": "10405082_4",
+}
+BOARD_NAME = "Behavioral Health Professionals, Board of"
+DOC_CATEGORY = "Public Discipline Documents"
+PAGE_SIZE = 200
 
 HERE = Path(__file__).resolve().parent
 STATE_FOLDER = HERE.parent
@@ -67,25 +89,38 @@ HEADERS = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
     ),
+    "X-Requested-With": "XMLHttpRequest",
+    "Referer": SITE + "/",
 }
 PAGES_TO_READ = 3
 MIN_TEXT_CHARS = 200
+MIN_ALPHA_RATIO = 0.5      # share of letters in the extracted text below which it is treated as unreadable
 
-# An action page is worth downloading if it mentions the counselling board or licence.
-BOARD_WORDS = re.compile(
-    r"behavioral health professionals|behavioral science|mental health counsel|\bLMHC\b|"
-    r"marriage and family|\bLMFT\b",
-    re.I,
-)
-COUNSELOR = re.compile(r"mental health counsel|\bLMHC\b|\bTLMHC\b", re.I)
+COUNSELOR = re.compile(r"mental health counsel|\bLMHC\b|\bTLMHC\b|\bLMHC-T\b", re.I)
 OTHER_RULES = [
-    (re.compile(r"marriage and family|marriage & family|\bLMFT\b|\bTLMFT\b", re.I), "marriage & family therapy"),
+    (re.compile(r"marital and family|marriage and family|marriage & family|\bLMFT\b|\bTLMFT\b", re.I), "marriage & family therapy"),
     (re.compile(r"social work|\bLISW\b|\bLMSW\b|\bLBSW\b", re.I), "social work"),
     (re.compile(r"psycholog", re.I), "psychology"),
     (re.compile(r"behavior analy|\bBCBA\b|\bLBA\b", re.I), "behavior analysis"),
-    (re.compile(r"applicant", re.I), "applicant"),
+    (re.compile(r"applicant|application for licens", re.I), "applicant"),
 ]
-CASE_NO = re.compile(r"\b(\d{2}-\d{2,4}(?:-\d{1,4})?|[A-Z]{2,4}-?\d{2}-\d{2,4})\b")
+# Profession words as they appear in Iowa order headers and licence sentences:
+# "RE: Mental Health Counselor License of", "issued mental health counselor license no.",
+# "BEFORE THE BOARD OF SOCIAL WORK", "BEFORE THE IOWA BOARD OF PSYCHOLOGY".
+PROFESSION_WORDS = [
+    (re.compile(r"mental health counsel", re.I), "counselor"),
+    (re.compile(r"marital and family|marriage and family|marriage & family", re.I), "marriage & family therapy"),
+    (re.compile(r"social work", re.I), "social work"),
+    (re.compile(r"psycholog", re.I), "psychology"),
+    (re.compile(r"behavior analy", re.I), "behavior analysis"),
+]
+HEADER_RE = re.compile(r"\bRE:\s*(.{0,60}?)\s+Licen[sc]e", re.I | re.S)
+BOARD_RE = re.compile(r"BEFORE THE (?:IOWA )?BOARD OF (SOCIAL WORK|PSYCHOLOGY|BEHAVIORAL SCIENCE|MARITAL AND FAMILY THERAPY)", re.I)
+LICENSE_SENTENCE = re.compile(r"issued (?:an? |Iowa |the )?(?:[A-Za-z]+ ){0,3}?(mental health counsel\w*|marital and family therap\w*|marriage and family therap\w*|social work\w*|psycholog\w*|behavior analy\w*)[^.]{0,40}licen[sc]e", re.I)
+FULL_DOC_PAGES = 15        # pages to read when the first pages do not name a profession
+
+# 23-0052, 2025-0478, 26DBBH0003
+CASE_NO = re.compile(r"\b(\d{2,4}-\d{3,4}|\d{2}DBBH\d{4})\b")
 IN_THE_MATTER = re.compile(r"IN THE MATTER OF[:\s]+(?:THE\s+)?(?:LICENSE\s+OF\s+)?([A-Z][A-Za-z'\-\. ]{2,60}?)[,\n]", re.I)
 ILLEGAL_FILENAME = re.compile(r'[\\/:*?"<>|]+')
 
@@ -112,104 +147,108 @@ def clean_text(s: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# Pass 1: crawl the list and the action pages
+# Pass 1: crawl the documents.iowa.gov index
 # --------------------------------------------------------------------------- #
 
-def action_links_on(html: str) -> tuple[list[tuple[str, str]], str | None]:
-    """Return ([(action_url, list_text)], next_page_url) for one list page."""
-    soup = BeautifulSoup(html, "html.parser")
-    actions: list[tuple[str, str]] = []
-    seen = set()
-    next_url = None
-    for a in soup.find_all("a", href=True):
-        url = urljoin(SITE, a["href"])
-        p = urlparse(url)
-        if p.netloc and p.netloc not in PDF_HOSTS:
-            continue
-        path = p.path.rstrip("/")
-        if path.startswith(LIST_PATH + "/") and not path.lower().endswith(".pdf"):
-            if url in seen:
-                continue
-            seen.add(url)
-            container = a
-            for parent in a.parents:
-                if parent.name in ("tr", "li", "article", "div"):
-                    container = parent
-                    break
-            actions.append((url, clean_text(container.get_text(" ", strip=True))[:300]))
-        elif path == LIST_PATH and "page" in parse_qs(p.query):
-            rel = (a.get("rel") or [])
-            label = clean_text(a.get_text()).lower()
-            if "next" in rel or label in ("next", "next ›", "›", "next page", "next >", ">"):
-                next_url = url
-    return actions, next_url
+def search_page(start: int, length: int) -> dict:
+    """One page of the index, ordered oldest upload first. Returns the raw JSON."""
+    criteria = [f"Attr_{ATTR['board']}:='{BOARD_NAME}'", f"Attr_{ATTR['category']}:='{DOC_CATEGORY}'"]
+    form = {
+        "draw": "1", "start": str(start), "length": str(length),
+        "categoryId": CATEGORY_ID, "keywords": "",
+        "query": " && ".join(f"({c})" for c in criteria),
+        "order[0][column]": "create_date", "order[0][dir]": "asc",
+    }
+    for i, c in enumerate(criteria):
+        form[f"criteria[{i}]"] = c
+    last_err = None
+    for attempt in range(1, RETRIES + 1):
+        try:
+            resp = session.post(SEARCH_URL, data=form, timeout=TIMEOUT)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            if attempt < RETRIES:
+                time.sleep(PAUSE_SECONDS * attempt)
+    raise RuntimeError(f"search start={start}: {last_err}")
 
 
-def pdf_links_on(html: str, base: str) -> list[tuple[str, str]]:
-    soup = BeautifulSoup(html, "html.parser")
-    out, seen = [], set()
-    for a in soup.find_all("a", href=True):
-        url = urljoin(base, a["href"])
-        p = urlparse(url)
-        if p.path.lower().endswith(".pdf") and (p.netloc in PDF_HOSTS or p.netloc.endswith("iowa.gov")):
-            if url not in seen:
-                seen.add(url)
-                out.append((url, clean_text(a.get_text(" ", strip=True))))
-    return out
+def record_to_action(rec: dict) -> dict:
+    a = rec.get("attributes") or {}
+    doc_id = str(rec.get("id", ""))
+    name = clean_text(rec.get("name", ""))
+    last = clean_text(a.get(f"Attr_{ATTR['last']}", ""))
+    first = clean_text(a.get(f"Attr_{ATTR['first']}", ""))
+    city = clean_text(a.get(f"Attr_{ATTR['city']}", ""))
+    state = clean_text(a.get(f"Attr_{ATTR['state']}", ""))
+    mime = rec.get("mime_type") or ""
+    ext = ".pdf" if "pdf" in mime else (".docx" if "wordprocessingml" in mime else "")
+    is_pdf = ext == ".pdf"
+    return {
+        "action_url": f"{SITE}/#document={doc_id}",
+        "title": name,
+        "list_text": ", ".join(p for p in (f"{first} {last}".strip(), city, state) if p),
+        "relevant": "yes" if is_pdf else "no",
+        "pdf_urls": DOWNLOAD_URL + doc_id,
+        "pdf_labels": name,
+        "note": "" if is_pdf else f"not a PDF ({mime or 'unknown type'})",
+        "page_text": clean_text(rec.get("short_summary", ""))[:1500],
+        "doc_id": doc_id,
+        "last_name": last,
+        "first_name": first,
+        "city": city,
+        "state": state,
+        "upload_date": rec.get("create_date", ""),
+        "mime_type": mime,
+        "size": rec.get("size_formatted", ""),
+        "archived": a.get(f"Attr_{ATTR['archived']}", ""),
+        "case_number": case_from(name),
+        "ext": ext,
+    }
 
 
 def crawl(max_pages: int, debug: bool) -> list[dict]:
-    url = urljoin(SITE, LIST_PATH)
+    try:
+        session.get(SITE + "/", timeout=TIMEOUT)            # sets the site cookie
+    except Exception as exc:  # noqa: BLE001
+        print(f"  WARNING could not open {SITE}: {exc}")
     actions: list[dict] = []
-    seen_actions = set()
+    seen: set[str] = set()
+    start, total = 0, None
     for page_no in range(1, max_pages + 1):
         try:
-            html = fetch(url)
+            data = search_page(start, PAGE_SIZE)
         except Exception as exc:  # noqa: BLE001
-            print(f"  WARNING list page {page_no} failed: {exc}")
+            print(f"  WARNING index page {page_no} failed: {exc}")
             break
-        found, next_url = action_links_on(html)
-        new = [(u, t) for u, t in found if u not in seen_actions]
-        print(f"  list page {page_no:>3}: {len(found)} action links ({len(new)} new)")
-        if debug or (page_no == 1 and not found):
+        rows = data.get("data") or []
+        total = data.get("recordsFiltered", data.get("recordsTotal"))
+        if debug or (page_no == 1 and not rows):
             DEBUG_DIR.mkdir(exist_ok=True)
-            (DEBUG_DIR / f"list_page_{page_no}.html").write_text(html, encoding="utf-8")
-        for action_url, list_text in new:
-            seen_actions.add(action_url)
-            actions.append({"action_url": action_url, "list_text": list_text})
-        if not next_url or not new:
+            import json
+            (DEBUG_DIR / f"index_page_{page_no}.json").write_text(json.dumps(data, indent=1), encoding="utf-8")
+        new = 0
+        for rec in rows:
+            act = record_to_action(rec)
+            if act["doc_id"] in seen:
+                continue
+            seen.add(act["doc_id"])
+            actions.append(act)
+            new += 1
+        print(f"  index page {page_no:>3}: {len(rows)} records ({new} new, {len(actions)} so far, index says {total})")
+        if len(rows) < PAGE_SIZE or (total is not None and len(actions) >= int(total)):
             break
-        url = next_url
+        start += PAGE_SIZE
         time.sleep(PAUSE_SECONDS)
-
-    print(f"\nOpening {len(actions)} action page(s) to find documents...")
-    for i, act in enumerate(actions, 1):
-        time.sleep(PAUSE_SECONDS)
-        try:
-            html = fetch(act["action_url"])
-        except Exception as exc:  # noqa: BLE001
-            act.update(page_text="", relevant="error", pdf_urls="", pdf_labels="", note=str(exc))
-            continue
-        soup = BeautifulSoup(html, "html.parser")
-        main = soup.find("main") or soup.find("article") or soup
-        text = clean_text(main.get_text(" ", strip=True))
-        title = clean_text(soup.title.get_text()) if soup.title else ""
-        pdfs = pdf_links_on(html, act["action_url"])
-        relevant = bool(BOARD_WORDS.search(text + " " + act["list_text"]))
-        act.update(
-            title=title,
-            page_text=text[:1500],
-            relevant="yes" if relevant else "no",
-            pdf_urls=" | ".join(u for u, _ in pdfs),
-            pdf_labels=" | ".join(l for _, l in pdfs),
-            note="" if pdfs else "no PDF links on page",
-        )
-        if i % 25 == 0:
-            print(f"  ... {i}/{len(actions)}")
     return actions
 
 
-ACTION_FIELDS = ["action_url", "title", "list_text", "relevant", "pdf_urls", "pdf_labels", "note", "page_text"]
+ACTION_FIELDS = [
+    "action_url", "title", "list_text", "relevant", "pdf_urls", "pdf_labels", "note", "page_text",
+    "doc_id", "last_name", "first_name", "city", "state", "upload_date", "mime_type", "size", "archived",
+    "case_number",
+]
 
 
 def write_actions(actions: list[dict]) -> None:
@@ -219,34 +258,42 @@ def write_actions(actions: list[dict]) -> None:
         w.writerows(actions)
 
 
+def read_actions() -> list[dict]:
+    if not ACTIONS_PATH.exists():
+        return []
+    with ACTIONS_PATH.open(encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    for r in rows:
+        r["ext"] = ".pdf" if "pdf" in (r.get("mime_type") or "") else (".docx" if "wordprocessingml" in (r.get("mime_type") or "") else "")
+    return rows
+
+
 # --------------------------------------------------------------------------- #
-# Pass 2: download every PDF from relevant action pages
+# Pass 2: download every document
 # --------------------------------------------------------------------------- #
 
 def slug(s: str, n: int = 60) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "-", s).strip("-")[:n]
 
 
+def local_name(act: dict) -> str:
+    stem = Path(act["title"]).stem if act["title"].lower().endswith((".pdf", ".docx")) else act["title"]
+    ext = act.get("ext") or ".pdf"
+    return f"{act['doc_id']}__{slug(stem)}{ext}"
+
+
 def download_pdfs(actions: list[dict]) -> dict[str, dict]:
-    """Returns {local_filename: {action, pdf_url, label}}."""
+    """Returns {local_filename: action}."""
     ALL_FOLDER.mkdir(parents=True, exist_ok=True)
-    jobs = []
-    for act in actions:
-        if act.get("relevant") != "yes" or not act.get("pdf_urls"):
-            continue
-        urls = act["pdf_urls"].split(" | ")
-        labels = act["pdf_labels"].split(" | ") if act.get("pdf_labels") else [""] * len(urls)
-        action_slug = slug(urlparse(act["action_url"]).path.rsplit("/", 1)[-1])
-        for u, label in zip(urls, labels):
-            local = f"{action_slug}__{slug(unquote(Path(urlparse(u).path).stem))}.pdf"
-            jobs.append((local, u, label, act))
+    jobs = [(local_name(a), a) for a in actions if a.get("pdf_urls")]
     index: dict[str, dict] = {}
     with LOG_PATH.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=["filename", "status", "official_url", "message"])
         writer.writeheader()
         total, ok, skipped, failed = len(jobs), 0, 0, 0
-        for i, (local, u, label, act) in enumerate(jobs, 1):
-            index[local] = {"action": act, "pdf_url": u, "label": label}
+        for i, (local, act) in enumerate(jobs, 1):
+            index[local] = act
+            u = act["pdf_urls"]
             target = ALL_FOLDER / local
             row = {"filename": local, "official_url": u, "message": ""}
             if target.exists() and target.stat().st_size > 0:
@@ -255,7 +302,7 @@ def download_pdfs(actions: list[dict]) -> dict[str, dict]:
                 continue
             try:
                 data = fetch(u, binary=True)
-                if not data.startswith(b"%PDF"):
+                if local.endswith(".pdf") and not data.startswith(b"%PDF"):
                     raise RuntimeError("response is not a PDF")
                 target.write_bytes(data)
                 ok += 1
@@ -289,24 +336,93 @@ def pdf_text(path: Path, pages: int = PAGES_TO_READ) -> str:
     return "\n".join(out)
 
 
+def text_is_readable(text: str) -> bool:
+    """False for a text layer that is really glyph codes (Type3 fonts with no Unicode map)."""
+    t = text.strip()
+    if not t:
+        return False
+    letters = sum(c.isalpha() for c in t)
+    return letters / len(t) >= MIN_ALPHA_RATIO
+
+
+def profession_in(text: str) -> str:
+    for pattern, label in PROFESSION_WORDS:
+        if pattern.search(text or ""):
+            return label
+    return ""
+
+
+def header_profession(text: str) -> str:
+    """Profession from the caption: 'RE: Social Work License of ...' or 'BEFORE THE BOARD OF PSYCHOLOGY'."""
+    head = text[:1200]
+    m = HEADER_RE.search(head)
+    if m:
+        prof = profession_in(m.group(1))
+        if prof:
+            return prof
+    m = BOARD_RE.search(head)
+    if m:
+        board = m.group(1).lower()
+        if board == "social work":
+            return "social work"
+        if board == "psychology":
+            return "psychology"
+        if board == "marital and family therapy":
+            return "marriage & family therapy"
+    return ""
+
+
+def body_profession(text: str) -> str:
+    """Profession from the licence sentence ('Respondent was issued mental health counselor license no. ...'),
+    else the first profession word anywhere in the text."""
+    m = LICENSE_SENTENCE.search(text or "")
+    if m:
+        prof = profession_in(m.group(1))
+        if prof:
+            return prof
+    if COUNSELOR.search(text or ""):
+        return "counselor"
+    for pattern, label in OTHER_RULES:
+        if pattern.search(text or ""):
+            return label
+    return ""
+
+
 def classify_text(text: str) -> tuple[str, str]:
     if len(text.strip()) < MIN_TEXT_CHARS:
         return "review", "no text layer (scan) - OCR then --reclassify"
-    if COUNSELOR.search(text):
-        return "counselor", ""
-    for pattern, label in OTHER_RULES:
-        if pattern.search(text):
-            return "drop", label
-    return "review", "profession not found in first pages"
+    if not text_is_readable(text):
+        return "review", "text layer unreadable (Type3 font, no Unicode map) - OCR then --reclassify"
+    head = header_profession(text)
+    body = body_profession(text)
+    if head and body and head != body:
+        return "review", f"header says {head}, body says {body}"
+    prof = head or body
+    if not prof:
+        return "review", "profession not found in first pages"
+    if prof == "counselor":
+        return "counselor", "" if head else "profession from body text only"
+    return "drop", prof
 
 
-def name_from(list_text: str, page_text: str, pdf_body: str) -> tuple[str, str]:
-    """Try 'Firstname Lastname, City' from the list, then 'In the matter of ...' from the PDF."""
-    for src in (list_text, page_text):
-        m = re.match(r"\s*(?:\d{1,2}/\d{1,2}/\d{2,4}\s+|[A-Z][a-z]{2,8} \d{1,2}, \d{4}\s+)?([A-Z][A-Za-z'\-\.]+(?: [A-Z][A-Za-z'\-\.]+){1,3}),", src or "")
-        if m:
-            tokens = m.group(1).split()
-            return tokens[-1], " ".join(tokens[:-1])
+def classify_file(path: Path) -> tuple[str, str, str]:
+    """Read the first pages; if they do not settle the profession, read the whole document (up to FULL_DOC_PAGES)."""
+    body = pdf_text(path)
+    category, note = classify_text(body)
+    if category == "review" and note.startswith("profession not found"):
+        more = pdf_text(path, FULL_DOC_PAGES)
+        if len(more) > len(body):
+            category, note = classify_text(more)
+            if category != "review":
+                note = (note + "; " if note else "") + "profession found after page 3"
+            body = more
+    return category, note, body
+
+
+def name_from(act: dict, pdf_body: str) -> tuple[str, str]:
+    """Index metadata first (Last Name / First Name fields), then 'In the matter of ...' from the PDF."""
+    if act.get("last_name"):
+        return act["last_name"], act.get("first_name", "")
     m = IN_THE_MATTER.search(pdf_body or "")
     if m:
         tokens = clean_text(m.group(1)).split()
@@ -326,43 +442,40 @@ def case_from(*texts: str) -> str:
 MANIFEST_FIELDS = [
     "source_file", "official_url", "action_url", "doc_label", "last_name", "first_name",
     "case_number", "category", "category_note", "text_chars", "filename",
+    "doc_id", "city", "state", "upload_date",
 ]
 
 
 def classify_all(index: dict[str, dict] | None) -> None:
     STATE_FOLDER.mkdir(parents=True, exist_ok=True)
     index = index or {}
-    # If we are reclassifying without a fresh crawl, rebuild what we can from the old manifest.
-    if not index and MANIFEST_PATH.exists():
-        with MANIFEST_PATH.open(encoding="utf-8") as fh:
-            for r in csv.DictReader(fh):
-                index[r["source_file"]] = {
-                    "action": {"action_url": r.get("action_url", ""), "list_text": "", "page_text": ""},
-                    "pdf_url": r.get("official_url", ""),
-                    "label": r.get("doc_label", ""),
-                }
-    sources = {p.name: p for p in ALL_FOLDER.glob("*.pdf")}
+    if not index:
+        # Reclassify without a fresh crawl: rebuild the metadata from actions.csv.
+        for act in read_actions():
+            index[local_name(act)] = act
+    sources = {p.name: p for p in ALL_FOLDER.glob("*.*") if p.suffix.lower() in (".pdf", ".docx")}
     if REVIEW_FOLDER.exists():
         for p in REVIEW_FOLDER.glob("*.pdf"):
             sources[p.name] = p
     rows, seen, counts = [], {}, {}
     for name in sorted(sources):
         src = sources[name]
-        meta = index.get(name, {"action": {}, "pdf_url": "", "label": ""})
-        act = meta["action"]
-        try:
-            body = pdf_text(src)
-        except Exception as exc:  # noqa: BLE001
+        act = index.get(name, {})
+        if src.suffix.lower() != ".pdf":
             body = ""
-            category, note = "review", f"could not read PDF: {exc}"
+            category, note = "review", "not a PDF (Word document) - convert or request the PDF"
         else:
-            category, note = classify_text(body)
-        last, first = name_from(act.get("list_text", ""), act.get("page_text", ""), body)
-        case = case_from(act.get("list_text", ""), act.get("page_text", ""), body[:3000])
+            try:
+                category, note, body = classify_file(src)
+            except Exception as exc:  # noqa: BLE001
+                body = ""
+                category, note = "review", f"could not read PDF: {exc}"
+        last, first = name_from(act, body)
+        case = act.get("case_number") or case_from(act.get("title", ""), body[:3000])
         filename = ""
         if category == "counselor":
             name_part = f"{last}, {first}".strip(", ").strip() or src.stem
-            key = case or slug(meta.get("label") or src.stem, 40)
+            key = case or slug(Path(act.get("title", "")).stem or src.stem, 40)
             base = ILLEGAL_FILENAME.sub("", f"{name_part} {key}").strip()
             n = seen.get(base, 0) + 1
             seen[base] = n
@@ -370,7 +483,7 @@ def classify_all(index: dict[str, dict] | None) -> None:
             dest = STATE_FOLDER / filename
             if not dest.exists():
                 shutil.copy2(src, dest)
-        elif category == "review" and "scan" in note:
+        elif category == "review" and "OCR" in note:
             REVIEW_FOLDER.mkdir(exist_ok=True)
             if not (REVIEW_FOLDER / name).exists():
                 shutil.copy2(src, REVIEW_FOLDER / name)
@@ -378,9 +491,9 @@ def classify_all(index: dict[str, dict] | None) -> None:
         rows.append(
             {
                 "source_file": name,
-                "official_url": meta.get("pdf_url", ""),
+                "official_url": act.get("pdf_urls", ""),
                 "action_url": act.get("action_url", ""),
-                "doc_label": meta.get("label", ""),
+                "doc_label": act.get("title", ""),
                 "last_name": last,
                 "first_name": first,
                 "case_number": case,
@@ -388,6 +501,10 @@ def classify_all(index: dict[str, dict] | None) -> None:
                 "category_note": note,
                 "text_chars": len(body.strip()),
                 "filename": filename,
+                "doc_id": act.get("doc_id", ""),
+                "city": act.get("city", ""),
+                "state": act.get("state", ""),
+                "upload_date": act.get("upload_date", ""),
             }
         )
     with MANIFEST_PATH.open("w", newline="", encoding="utf-8") as fh:
@@ -401,26 +518,29 @@ def classify_all(index: dict[str, dict] | None) -> None:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--list-only", action="store_true", help="crawl and write actions.csv, download nothing")
+    ap.add_argument("--list-only", action="store_true", help="crawl the index and write actions.csv, download nothing")
     ap.add_argument("--reclassify", action="store_true", help="skip crawl/download; re-run classification")
-    ap.add_argument("--max-pages", type=int, default=300, help="maximum list pages to follow")
-    ap.add_argument("--debug-html", action="store_true", help="save every list page under downloader\\debug\\")
+    ap.add_argument("--max-pages", type=int, default=300, help="maximum index pages to read (200 records each)")
+    ap.add_argument("--debug-html", action="store_true", help="save every index page (JSON) under downloader\\debug\\")
     args = ap.parse_args(argv)
 
-    print(f"Iowa DIAL board actions -> {STATE_FOLDER}")
+    print(f"Iowa board discipline documents (documents.iowa.gov, {BOARD_NAME}) -> {STATE_FOLDER}")
     if args.reclassify:
         classify_all(None)
         return 0
 
     actions = crawl(args.max_pages, args.debug_html)
     if not actions:
-        print(f"\nNo action links found on the list page. Its HTML is under {DEBUG_DIR}; compare with the live site.")
+        print(f"\nNo records came back from the index. The raw response is under {DEBUG_DIR}; compare with the site.")
         return 1
     write_actions(actions)
-    relevant = [a for a in actions if a.get("relevant") == "yes"]
-    with_pdf = [a for a in relevant if a.get("pdf_urls")]
-    print(f"\nactions.csv written: {len(actions)} action pages, {len(relevant)} counselling-board related, "
-          f"{len(with_pdf)} with PDF links")
+    pdfs = [a for a in actions if a.get("relevant") == "yes"]
+    def _key(d: str):
+        m = re.match(r"(\d{1,2})/(\d{1,2})/(\d{4})", d)
+        return (int(m.group(3)), int(m.group(1)), int(m.group(2))) if m else (0, 0, 0)
+    dates = sorted((a["upload_date"] for a in actions if a.get("upload_date")), key=_key)
+    print(f"\nactions.csv written: {len(actions)} documents, {len(pdfs)} PDFs, "
+          f"{len(actions) - len(pdfs)} other file types; upload dates {dates[0] if dates else '?'} to {dates[-1] if dates else '?'}")
     if args.list_only:
         return 0
     index = download_pdfs(actions)
