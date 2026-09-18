@@ -37,14 +37,14 @@ present are skipped, so re-running only fetches what is new).
 | Iowa | 106 | 68 | 228 | 469 | 0 | 131 MB |
 | Kansas | 76 | 60 | 0 (see OCR note) | 503 (never fetched) | 2 | 45 MB |
 | New Hampshire | 18 | 16 | 0 (see OCR note) | 21 (never fetched) | 0 | 15 MB |
-| Oklahoma | 39 | | 0 | | | 9 MB |
+| Oklahoma | 39 | 38 | 0 (no review step; see OCR note) | 31 (LMFT and LBP, never fetched) | 0 | 9 MB |
 
 Total pushed: about 277 MB. No file exceeded the 95 MB single-file limit,
 so nothing was skipped for size.
 
 Oklahoma was added to this branch by a separate session (39 LPC orders from
 the OBBHL Thentia register, 2010-04 to 2026-08, plus its manifest and
-download log); it is not covered by the notes below.
+download log); see the Oklahoma section at the end.
 
 ## Vermont (138 PDFs in the OPR allied mental health folder)
 
@@ -136,3 +136,27 @@ first two pages, so these are scans despite being recent.
 - Committed in batches of at most 200 files, one state per push.
 - No git LFS. No PDFs were added to the working branch.
 - Each PDF was checked to start with `%PDF-` before commit.
+
+## Oklahoma (39 counselor documents in manifest.csv)
+
+Source: Oklahoma State Board of Behavioral Health Licensure public register
+(Thentia), https://obbhl.us.thentiacloud.net/webs/obbhl/register/ (tick
+"Disciplined"). Downloaded 2026-09-18 with
+`board-orders/oklahoma_downloader/download_oklahoma_orders.py` from the
+working branch.
+
+- `Oklahoma/` holds 39 order PDFs (9.3 MB), one per Public Notice that had
+  an attachment, for Licensed Professional Counselors only. Files are named
+  "Lastname, Firstname <license number> <effective date>.pdf"; four people
+  with no license number on the register are named with the case number or
+  the name and date alone.
+- `Oklahoma/downloader/manifest.csv` lists every disciplined licensee the
+  register returned (186: 144 LPC, 11 LPC Candidate, 23 LMFT, 8 LBP) with
+  one row per Public Notice for the LPCs and candidates (161 LPC notices,
+  1989 to 2026-08-07; 122 of them are index-only lines with no document).
+  `download_log.csv` records the 39 downloads (0 failures).
+- Date range of the PDFs: 2010-04-08 to 2026-08-07 (8 before 2020, the
+  rest 2021 on). LPC Candidates have notices but no documents; LMFT and LBP
+  were not fetched.
+- Text layer: 7 of 39 are text-native, 32 are image scans. Run Foxit OCR
+  on the folder before make_text_sidecars.py.
