@@ -186,6 +186,11 @@ PROFESSION_WORDS = re.compile(
 )
 
 
+def nice_case(s: str) -> str:
+    """Title-case only words written in all caps or all lower; keep 'DeValk', 'McCoy' as written."""
+    return " ".join(w.title() if (w.isupper() or w.islower()) else w for w in s.split())
+
+
 def split_name(text: str) -> tuple[str, str, str]:
     """
     Pull (last, first, raw) out of the entry text. Handles "Last, First ..." and
@@ -208,12 +213,12 @@ def split_name(text: str) -> tuple[str, str, str]:
     if "," in cut:
         last, first = [clean_text(p) for p in cut.split(",", 1)]
         first = " ".join(first.split()[:2])   # given name + middle initial at most
-        return last.title(), first.title(), raw
+        return nice_case(last), nice_case(first), raw
     tokens = cut.split()
     if len(tokens) == 1:
-        return tokens[0].title(), "", raw
+        return nice_case(tokens[0]), "", raw
     tokens = tokens[:3]
-    return tokens[-1].title(), " ".join(tokens[:-1]).title(), raw
+    return nice_case(tokens[-1]), nice_case(" ".join(tokens[:-1])), raw
 
 
 def parse_index_page(page_label: str, html: str) -> list[dict]:
