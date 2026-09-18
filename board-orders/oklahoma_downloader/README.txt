@@ -27,7 +27,7 @@ What happens:
   row per notice: name, license number, profession, license status, notice
   type, effective date, the one-line summary, how many documents are
   attached, their names, the download links and the target filenames;
-- notices with no attached document (nearly all of those before 2021)
+- notices with no attached document (most of those before 2021)
   stay in the manifest flagged "index only, no document". They are the
   older history and would need a records request;
 - pass 3 downloads every attached document on a counselor notice
@@ -65,21 +65,26 @@ VERIFIED 2026-09-18 (live, from a cloud session; first full run the same day)
     The register answers "403 Forbidden" to a bare script; the script
     therefore identifies itself as a normal browser, which is accepted.
 
-    What the run found (see the counts printed at the end of the run and
-    the "Oklahoma" row in HANDOFF_2026-09-18.md): notices go back to 1999,
-    but attached order documents only start around 2021. Document names
-    follow "Lastname, Firstname_<case number>_Consent Order.pdf",
+    What the first full run found (2026-09-18): 144 disciplined LPCs with
+    161 notices between them, dated 1989 to 2026-08-07. Only 39 notices
+    carry a document; the other 122 are index-only lines (a date and a
+    one-sentence summary). The 39 orders run from 2010-04-08 to 2026-08-07,
+    eight of them before 2020 and the rest from 2021 on. All 39 downloaded
+    without a failure. The 11 LPC Candidates have notices but no documents.
+    Document names follow "Lastname, Firstname_<case number>_Consent Order.pdf",
     "..._Final Order.pdf", "..._Voluntary Surrender.pdf"; the case number
     (for example 2025-LPC-738) is kept in the manifest's case_number column.
+    Four licensees have no license number on the register ("N/A"); their
+    files are named with the case number instead, or with the name and
+    date alone when there is no case number either.
 
-    The orders are IMAGE SCANS. PyMuPDF found no text in the samples
-    checked before the run, and --text-check after the run reports the
-    exact count. Run Foxit OCR on the Oklahoma folder BEFORE
-    make_text_sidecars.py, otherwise the sidecars come back empty.
+    The orders are mostly IMAGE SCANS. --text-check on the 39 files: 7 have
+    a text layer, 32 are image only. Run Foxit OCR on the Oklahoma folder
+    BEFORE make_text_sidecars.py, otherwise 32 sidecars come back empty.
 
     First run on your machine:
     1. py download_oklahoma_orders.py --list-only and open manifest.csv.
-       Expect about 145 counselor rows (one per notice) and about 80 with
+       Expect about 160 counselor rows (one per notice) and about 40 with
        an attachment. If the counts differ a lot, the register changed.
     2. Double-click Run_Oklahoma_Downloader.cmd. Files already on disk are
        skipped, so re-running after an interruption is safe.

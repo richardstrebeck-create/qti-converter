@@ -5,8 +5,8 @@ Oklahoma State Board of Behavioral Health Licensure order downloader
 The board's public register (a Thentia Cloud app at
 https://obbhl.us.thentiacloud.net/webs/obbhl/register/) shows a "Public
 Notices" section on each disciplined licensee's profile. Each notice has a
-one-line summary, an effective date and, for notices from about 2021 on, the
-signed order as a PDF attachment. The register's own REST calls answer plain
+one-line summary, an effective date and, for most notices from 2021 on (and a
+few back to 2010), the signed order as a PDF attachment. The register's own REST calls answer plain
 HTTP GET requests with JSON (verified 2026-09-18), so no browser is needed:
 
   pass 1  search   rest/public/profile/search/?keyword=&skip=<n>&take=<n>&disciplined=true
