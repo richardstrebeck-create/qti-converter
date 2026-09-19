@@ -1,5 +1,9 @@
 MASSACHUSETTS LMHC SANCTION-LIST BUILDER
 
+TIER: FOIA (Tier 3). The sanctioned-licensee index is fully collectible from
+the public API, but the order documents come only by a Public Records Act
+request.
+
 Massachusetts is an INDEX-only state for this project. It does NOT post board
 order documents online. Its "Check a Health License" site
 (https://checkahealthlicense.mass.gov/) shows, per licensee, the license
