@@ -15,7 +15,7 @@ of names without the orders does not qualify.
 | State | Index (names, actions, dates) | Order documents | Scriptable? | Rating | Decision |
 |---|---|---|---|---|---|
 | Delaware | Open Data Portal CSV, all DPR boards, 1997 to 2025; 33 Professional Counselors of Mental Health with 69 action rows | On DELPROS (Salesforce): each license record lists its Board Orders with public file links | Index yes; per-licensee document list yes (JavaScript remoting, no CAPTCHA); the file download itself runs through a Salesforce viewer and was not reproduced by script in this pass | MODERATE | Qualifies. Small (about 30 to 40 documents). Build once the download step is solved, or fetch by hand |
-| Oregon | None posted since the cumulative PDF was removed; Thentia register is the only source | On the Thentia register, per licensee ("Disciplinary Actions" heading) | See section 2 | See section 2 | See section 2 |
+| Oregon | None posted: the cumulative disciplinary_report.pdf is gone (404 live and in the archive); the Compliance page sends readers to the licensee lookup | On the Thentia register (oblpct.us.thentiacloud.net), per licensee: Notice of Proposed Action, Default Order, Stipulated Order, Bill of Costs as PDF attachments | Yes: the register's REST layer answers plain GETs (same design as Oklahoma); one order downloaded (8-page scan). The catch is enumeration: the search results omit the notices, so finding every disciplined LPC means one record call per LPC and associate (about 19,500 calls, 8 to 11 hours at 1.5 s), or a partial run on the Revoked, Surrendered and Suspended statuses (114 people) | MODERATE | Qualifies. Build like Oklahoma; plan an overnight sweep or accept the status-only subset |
 | Alaska | Quarterly "Disciplinary Action Report" PDFs, all boards, one paragraph per action, 2017 on; counselor section labeled "PCO - Board of Professional Counselors" | Per licensee on the Professional License Search, "for certain programs" | No: the whole commerce.alaska.gov host answers scripts with a DataDome bot challenge (HTTP 403, "Please enable JS"); the PDFs are readable only through the Wayback Machine | NOT FEASIBLE by script | Skip. Index only, and only by archive |
 | Nebraska | Monthly and rolling ten-year PDFs, all professions; "Mental Health Practitioner" rows labeled (23 in the 2016 to 2026 file) | Per licensee in the License Information System (LIS) record, "Disciplinary/Non-Disciplinary Information" | No: the LIS search form carries a Google reCAPTCHA | NOT FEASIBLE by script | Skip. Index only |
 
@@ -83,7 +83,49 @@ not access. Not built in this pass.
 
 ## 2. Oregon
 
-(filled in below once the register enumeration finished)
+**Board site.** `https://www.oregon.gov/oblpct/` no longer has a Board
+Actions page. The survey's cumulative report
+(`/oblpct/BoardAction/disciplinary_report.pdf`) is 404 live and the Wayback
+Machine holds no copy. The Compliance page
+(`/oblpct/Pages/Compliance.aspx`) says: "To search for Board actions
+regarding licensed professional counselors (LPCs), licensed marriage and
+family therapists (LMFTs), or registered associates, please use our
+Licensee Lookup. Documents are available under the 'Disciplinary Actions'
+heading within the person's record." A table of actions against
+unlicensed persons sits on the same page, and "Contact us for a list of
+Board disciplinary actions with summaries."
+
+**The register.** `https://oblpct.us.thentiacloud.net/webs/oblpct/register/`
+is a Thentia register, the same product Oklahoma uses, with a public REST
+layer that answers plain GETs (no CAPTCHA, no session):
+
+| Call | What it returns |
+|---|---|
+| `/rest/public/registrant/search/?keyword=&supervisor=&filter=all&skip=0&take=500&dsrList=` | Paged list of every registrant: 24,798 on 2026-09-19 (LPC 10,309; Professional Counselor Associate 9,007; LMFT 3,215; MFT Associate 1,938; limited permits 328). Fields: id, name, license number, category, status, city, expiry. The `publicNotices`, `registrationRecords` and `memberships` fields come back EMPTY in search results |
+| `keyword=Revoked` (or Surrendered, Suspended) | The search matches status words: Revoked 57, Surrendered 53, Suspended 4 (114 people). Probation and reprimand are not statuses, so this misses them |
+| `dsrList=true` | 285 supervisors approved for disciplinary supervision, not disciplined licensees |
+| `/rest/public/registrant/get/?id=<id>` | One full record with `registrationRecords` (status history with dates) and `publicNotices`: notice type, effective date, case-number summary, and `attachments` with the file name and a 160-character attachment id |
+| `/rest/public/annotation/download/index.php?id=<attachment id>&entity=<effi_entity>` | The PDF, plain GET, `application/pdf` |
+
+Verified on two records: LPC C6554 (revoked 2024-06-13) has three notices,
+Notice of Proposed Action 2023-10-31, Default Order 2024-06-13, Bill of
+Costs 2024-07-09, each with one PDF; LPC C5496 (suspended 2026-02-10) has
+three notices starting with a Notice of Proposed Action 2025-12-08. The
+first PDF (Adkisson, NPDA, 1.5 MB) downloaded correctly: 8 pages, 0
+characters of text, an image scan. File names follow
+`Last.First_case_TYPE_date.pdf` (NPDA, DO, BoC, and presumably SO for
+stipulated orders).
+
+**Enumeration.** Because the search omits the notices, the only way to
+find every disciplined LPC is to call `get` for each LPC and associate
+(about 19,500 calls; 8 to 11 hours at one call every 1.5 seconds), or to
+take the status shortcut (114 people) and miss probations and reprimands
+on active licenses. `get` does not accept several ids at once (HTTP 500).
+
+**Rating: MODERATE, Tier 1 by the rule** (orders public on the board's
+licensee lookup, script-reachable without a CAPTCHA). Build in the
+Oklahoma shape with a `--statuses-only` quick mode and a full sweep mode
+that caches each record so the sweep can be resumed. Expect scans (OCR).
 
 ## 3. Alaska
 
@@ -141,6 +183,6 @@ the 23 names in LIS by hand.
 
 - No CAPTCHA, bot challenge or login was bypassed (Alaska DataDome,
   Nebraska reCAPTCHA).
-- No downloader was built. Delaware is the only one of the four that
-  qualifies, and its file-download step is still open.
+- No downloader was built. Delaware and Oregon qualify; Delaware's
+  file-download step is still open and Oregon needs a long record sweep.
 - Nothing was added to branch `board-orders-data`.
