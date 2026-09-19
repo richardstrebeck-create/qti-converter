@@ -69,6 +69,15 @@ for this pass:
 | 2026-06-26 | May 2026 | 21 | LPCC 1 (a Citation) |
 | 2026-09-19 (live) | August 2026 | 19 | 0 |
 
+**Update 2026-09-19 (later session):** all 78 distinct Wayback captures
+(2018-01-07 to 2026-09-10) plus the live page were read and parsed;
+the names, per-month counts and caveats are in `california_names/`
+(README.txt, bbs_enforcement_all.csv, california_counselor_names.csv,
+california_counselor_people.csv): 70 notice months from November 2017 to
+August 2026, 73 distinct LPCC/APCC/PCCI people, 36 months with no capture.
+The pre-2018 site pages (`/consumer/disciplinary_actions.shtml`, captures
+back to 2007) listed no names.
+
 So the BBS list covers all six BBS license types (LMFT, LCSW, LEP, LPCC and
 the associate registrations AMFT, ASW, APCC), labels LPCCs clearly, and
 yields roughly 5 to 15 LPCC or APCC entries a year. Rebuilding a multi-year
