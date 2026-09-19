@@ -1,5 +1,11 @@
 # California verification: Board of Behavioral Sciences / LPCC (2026-09-19)
 
+> **Decision 2026-09-19 (Richard): California is SKIPPED.** The project
+> collects only orders that a board lists publicly on its website. California
+> posts no order documents on a public page; they sit behind a CAPTCHA-gated
+> per-licensee search. The API sign-up and the Public Records Act request
+> below are recorded for reference and are not being pursued.
+
 Companion to `STATE_SURVEY_2026-09-18.md`, which rated California Tier 2
 MODERATE from search-engine snippets ("BBS recent-actions list plus DCA
 License Search per licensee"). This pass loaded the live pages from a cloud
@@ -18,7 +24,7 @@ No downloader was built (Phase 2 skipped).
 | 3. DCA iServices Search API | https://iservices.dca.ca.gov/ (spec at /swagger/spec/search.json, guide at /docs/iservice_user_guide.pdf) | An official, documented REST API for the same data: search by license type with hasDiscipline / hasDocuments flags per licensee, full detail per license number including "public record actions". Needs a self-service account, an application, and approval by DCA's API team (APP_ID and APP_KEY headers). Whether the order PDFs themselves are served through it is not stated in the spec | The scripted route, once the user holds a key |
 | 4. Other official routes | BBS board meeting materials, BBS newsletter, DCA Open Data Portal, data.ca.gov, Office of Administrative Hearings, DCA public licensee file, BreEZe | Aggregate enforcement statistics only; no orders anywhere; OAH publishes no general-jurisdiction decisions | Nothing to download |
 
-**Rating: HARD.** California publishes the full order documents (accusations,
+**Rating: HARD, SKIPPED by decision.** California publishes the full order documents (accusations,
 decisions, stipulated settlements) for every disciplined LPCC, but only
 behind the DCA License Search, whose search form is a CAPTCHA (Turnstile)
 and whose detail and download addresses cannot be derived. The BBS page is
