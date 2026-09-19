@@ -14,7 +14,7 @@ of names without the orders does not qualify.
 
 | State | Index (names, actions, dates) | Order documents | Scriptable? | Rating | Decision |
 |---|---|---|---|---|---|
-| Delaware | Open Data Portal CSV, all DPR boards, 1997 to 2025; 33 Professional Counselors of Mental Health with 69 action rows | On DELPROS (Salesforce): each license record lists its Board Orders with public file links | Index yes; per-licensee document list yes (JavaScript remoting, no CAPTCHA); the file download itself runs through a Salesforce viewer and was not reproduced by script in this pass | MODERATE | Qualifies. Small (about 30 to 40 documents). Build once the download step is solved, or fetch by hand |
+| Delaware | Open Data Portal CSV, all DPR boards, 1997 to 2025; 33 Professional Counselors of Mental Health with 69 action rows | On DELPROS (Salesforce): each license record lists its Board Orders with public file links | Index yes; per-licensee document list yes (JavaScript remoting, no CAPTCHA); the file bytes run through a Salesforce viewer that needs a browser | MODERATE | BUILT 2026-09-19: `delaware_downloader/` lists all 38 documents for 26 counselors (7 index-only) and writes manual_downloads.html for the by-hand save. See below |
 | Oregon | None posted: the cumulative disciplinary_report.pdf is gone (404 live and in the archive); the Compliance page sends readers to the licensee lookup | On the Thentia register (oblpct.us.thentiacloud.net), per licensee: Notice of Proposed Action, Default Order, Stipulated Order, Bill of Costs as PDF attachments | Yes: the register's REST layer answers plain GETs (same design as Oklahoma); one order downloaded (8-page scan). The catch is enumeration: the search results omit the notices, so finding every disciplined LPC means one record call per LPC and associate (about 19,500 calls, 8 to 11 hours at 1.5 s), or a partial run on the Revoked, Surrendered and Suspended statuses (114 people) | MODERATE | SKIPPED by decision 2026-09-19 (Richard): the orders are reachable but only by opening every one of about 19,500 records, and the board posts no list. Not being pursued |
 | Alaska | Quarterly "Disciplinary Action Report" PDFs, all boards, one paragraph per action, 2017 on; counselor section labeled "PCO - Board of Professional Counselors" | Per licensee on the Professional License Search, "for certain programs" | No: the whole commerce.alaska.gov host answers scripts with a DataDome bot challenge (HTTP 403, "Please enable JS"); the PDFs are readable only through the Wayback Machine | NOT FEASIBLE by script | Skip. Index only, and only by archive |
 | Nebraska | Monthly and rolling ten-year PDFs, all professions; "Mental Health Practitioner" rows labeled (23 in the 2016 to 2026 file) | Per licensee in the License Information System (LIS) record, "Disciplinary/Non-Disciplinary Information" | No: the LIS search form carries a Google reCAPTCHA | NOT FEASIBLE by script | Skip. Index only |
@@ -80,6 +80,23 @@ saving about 30 to 40 files by hand.
 **Rating: MODERATE.** Qualifies under the rule (orders public on the
 board's own licensing site, no CAPTCHA). The catch is the file transfer,
 not access. Not built in this pass.
+
+**Downloader (built 2026-09-19).** `board-orders/delaware_downloader/`
+(download_delaware_orders.py, README.txt, Run_Delaware_Downloader.cmd), in
+the Oklahoma/Texas/Colorado shape. Pass 1 reads the open-data CSV; pass 2
+calls DELPROS remoting per license NUMBER (the robust key: a name search
+misses several licensees, a license-number search finds them) and collects
+each counselor's board-order documents; pass 3 tries a direct download and,
+because the Salesforce delivery links are browser-only, writes every one to
+download_log.csv as MANUAL and builds `manual_downloads.html` (clickable,
+grouped by licensee) in the state folder. List-only run on 2026-09-19: 33
+counselors, 38 documents for 26 of them, 7 index-only (no DELPROS record),
+10 other-profession rows dropped (5 LCDP, 5 LMFT). manifest.csv and
+download_log.csv are on the working branch; no PDFs were fetched (the 38
+are a 15-minute by-hand save, then OCR the older scans). Full automation
+would need a headless browser to let the Salesforce viewer set its delivery
+cookie; that dependency was judged too heavy for the user's double-click
+workflow, so the manual page is the deliverable.
 
 ## 2. Oregon
 
