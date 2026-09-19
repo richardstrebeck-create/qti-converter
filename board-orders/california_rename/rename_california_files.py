@@ -70,6 +70,12 @@ TARGETS = [
     (828,   "Lam",         "Gabriel",            ["Gabriel Lam"]),
     (498,   "Au",          "Susan W. S.",        ["Susan W. S. Au", "Susan W S Au", "Susan Au"]),
     (14756, "Woodson",     "Kyle Emir",          ["Kyle Emir Woodson"]),
+    # Licensed LPCCs found in the saved orders but not on the original 29-name
+    # list (the BBS name index missed Thorpe and Still, and showed Alvarez as
+    # accusation-only though his case later resolved). Added 2026-09-19.
+    (1067,  "Alvarez",     "Guillermo Jesus",    ["Guillermo Jesus Alvarez", "Guillermo Alvarez"]),
+    (240,   "Thorpe",      "Kevin Scott",        ["Kevin Scott Thorpe", "Kevin Thorpe"]),
+    (None,  "Still",       "Elizabeth Marie",    ["Elizabeth Marie Still", "Elizabeth Still"]),  # LPCC number not yet known; matched by name
 ]
 
 ILLEGAL = re.compile(r'[\\/:*?"<>|]+')
@@ -84,6 +90,8 @@ def norm(s):
 
 def license_hit(text, number):
     """True if the LPCC license number appears next to an LPCC marker."""
+    if number is None:
+        return False
     n = str(number)
     # LPCC ... number   (e.g. "LPCC 7272", "LPCC No. 7272", "LPCC# 7272")
     if re.search(r"LPCC\D{0,15}0*" + n + r"\b", text):
@@ -192,6 +200,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--apply", action="store_true", help="rename for real (default is a dry run)")
     ap.add_argument("--folder", default="", help="folder holding the PDFs (default: this script's folder)")
+    ap.add_argument("--move-nonlpcc", action="store_true", help="on --apply, move the left-alone (non-LPCC) PDFs into a _not_LPCC subfolder")
     args = ap.parse_args(argv)
 
     folder = Path(args.folder).resolve() if args.folder else Path(__file__).resolve().parent
@@ -203,25 +212,27 @@ def main(argv=None):
 
     plan = []          # (src, new_name, person_key, how, date)
     unmatched = []     # (name, reason)
+    unmatched_paths = []
     used = {}
     plan_rows = []
     for p in pdfs:
         text = read_text(p)
         if text.startswith("__UNREADABLE__"):
-            unmatched.append((p.name, text)); continue
+            unmatched.append((p.name, text)); unmatched_paths.append(p); continue
         t, how = match_target(text)
         if not t:
-            unmatched.append((p.name, how))
+            unmatched.append((p.name, how)); unmatched_paths.append(p)
             plan_rows.append({"current": p.name, "match": "", "how": how, "date": "", "new_name": ""})
             continue
         number, last, first, _ = t
         date = effective_date(text) or "undated"
-        base = ILLEGAL.sub("", f"{last}, {first} LPCC {number} {date}").strip()
+        lickey = f"LPCC {number}" if number is not None else "LPCC"
+        base = ILLEGAL.sub("", f"{last}, {first} {lickey} {date}").strip()
         k = used.get(base, 0) + 1
         used[base] = k
         new_name = f"{base}.pdf" if k == 1 else f"{base} ({k}).pdf"
-        plan.append((p, new_name, f"LPCC {number}", how, date))
-        plan_rows.append({"current": p.name, "match": f"LPCC {number} {first} {last}",
+        plan.append((p, new_name, lickey, how, date))
+        plan_rows.append({"current": p.name, "match": f"{lickey} {first} {last}",
                           "how": how, "date": date, "new_name": new_name})
 
     print(f"Matched to a target: {len(plan)}")
@@ -234,7 +245,8 @@ def main(argv=None):
             print(f"  ? {name}   ({reason})")
 
     found = {key for _, _, key, _, _ in plan}
-    missing = [f"LPCC {t[0]} {t[2]} {t[1]}" for t in TARGETS if f"LPCC {t[0]}" not in found]
+    missing = [f"{('LPCC '+str(t[0])) if t[0] is not None else 'LPCC'} {t[2]} {t[1]}" for t in TARGETS
+               if (('LPCC '+str(t[0])) if t[0] is not None else 'LPCC') not in found]
     if missing:
         print(f"\n{len(missing)} of the 29 targets have no PDF in the folder:")
         for m in missing:
@@ -251,6 +263,15 @@ def main(argv=None):
         print("\nDry run. Check the plan above (and rename_plan.csv), then run with --apply to rename.")
         return 0
 
+    if args.move_nonlpcc and unmatched_paths:
+        out = folder / "_not_LPCC"
+        out.mkdir(exist_ok=True)
+        moved = 0
+        for up in unmatched_paths:
+            dest = out / up.name
+            if not dest.exists():
+                up.rename(dest); moved += 1
+        print(f"Moved {moved} non-LPCC file(s) into {out}")
     n = 0
     for src, new_name, *_ in plan:
         dst = src.with_name(new_name)

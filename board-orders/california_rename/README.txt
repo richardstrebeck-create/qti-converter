@@ -54,3 +54,36 @@ NOTES
 Built 2026-09-19. Companion to california_names\ (the BBS name index) and
 CALIFORNIA_VERIFICATION_2026-09-19.md (why California orders are saved by
 hand).
+
+-------------------------------------------------------------------------
+UPDATE 2026-09-19: LPCC-only scope, three more LPCCs, and the retrieval list
+-------------------------------------------------------------------------
+Scope is licensed LPCC only (no APCC/AMFT associates or interns).
+
+Three licensed LPCCs turned up in the saved orders but were not on the
+original 29-name list; they are now in TARGETS so the tool names them:
+  - Guillermo Jesus Alvarez, LPCC 1067 (the BBS name index showed him under
+    Accusation only, but his case resolved and the order is in the folder)
+  - Kevin Scott Thorpe, LPCC 240 (not in the BBS index at all)
+  - Elizabeth Marie Still, LPCC number not yet known (matched by name; read
+    her LPCC number off her order PDF and put it in her TARGETS line so the
+    file name carries the number)
+
+The associate and marriage-and-family files in the folder (APCC, AMFT, PCC
+Intern, applicants) are OUT of scope. Run with --move-nonlpcc to move every
+file the tool leaves alone into a _not_LPCC subfolder, so state_data\California\
+holds only LPCC orders:
+    py rename_california_files.py --apply --move-nonlpcc
+
+dca_lookup_worklist.csv is the retrieval list. Of the 29 licensed LPCCs,
+only Osborn and Ingalls were saved so far; the other 27 still need their
+orders. For each "no" row, open https://search.dca.ca.gov/ , pick Board of
+Behavioral Sciences and license type Licensed Professional Clinical
+Counselor, enter the license number, pass the CAPTCHA by hand, open the
+record, and save every document under Public Documents into
+state_data\California\ . Then re-run this tool to name them.
+
+Three rows are marked CHECK (Atwood 4997, Miller 15, Reagan 7527): the index
+shows them under Accusation only. Look each up in DCA; download the order
+ONLY if the search shows a Decision or Citation. If the accusation is still
+the only entry, leave them out (charges are not discipline).
